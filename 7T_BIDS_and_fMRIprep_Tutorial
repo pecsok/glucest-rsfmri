@@ -1,0 +1,49 @@
+This file describes step-by-step how to BIDSify 7T files and run fMRI prep
+
+To BIDSify 7T data: 
+
+1. Download the following from flywheel (dcm and nii.gz files): 
+* Refer to subject_tracker_all.xlsx on Box for T1 and Bold filenames
+   - T1
+   - BOLD
+   - TOPUP
+
+2. Put dicoms in their own folder within one big folder and scp all into PMACS
+
+3. unzip asdf.dicom.zip 
+
+4. module load dcm2niix 
+
+5. dcm2niix * (Generates niis plus the json file)
+
+6. scp the jsons back to local. Delete *.dcm and *.nii to save space. 
+
+7. BIDSify json and nii.gz filenames: 
+   generic format: 
+   sub-[subj]_ses-[ses#]_task-rest_bold.json
+   sub-[subj]_ses-[ses#]_dir-PA_run-1_epi.json
+   sub-[subj]_ses-[ses#]_T1w.json
+     
+   examples:
+   sub-80557_ses-10738_task-rest_bold.json
+   sub-80557_ses-10738_dir-PA_run-1_epi.json
+   sub-80557_ses-10738_T1w.json
+  
+8. Add the following line to the fmap json:
+   "IntendedFor": ["ses-10738/func/sub-80557_ses-10738_task-rest_bold.nii.gz"],
+
+9. Add the following line to the func json:
+   "TaskName": "rest"
+   
+10. Submit subject folder to BIDS validator:
+    https://bids-standard.github.io/bids-validator/
+
+11. If valid, scp subject folder into PMACS! Ready to run fMRIprep!
+    Current folder (To be updated soon): /project/bbl_roalf_22qmidline/maggiesandbox/subject/7T/7T_2/
+
+
+To run fMRI prep: 
+QUEUE=bbl ibash
+bsub "sh fmriprep_nick.sh"
+
+*Note: Do not need to run "ssh singularity01" since singularity image is already installed. 
