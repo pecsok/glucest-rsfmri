@@ -2,14 +2,30 @@ This file describes step-by-step how to BIDSify 7T files and run fMRI prep
 
 To BIDSify 7T data: 
 
-1. Download the following from flywheel (dcm and nii.gz files): 
+1a. Download the following from flywheel (dcm and nii.gz files): 
 * Refer to subject_tracker_all.xlsx on Box for T1 and Bold filenames
-   - T1
-   - BOLD
-   - TOPUP
 
+1b. Set up folders:
+   session=####
+   bblid=#####
+   mkdir ~/Desktop/Maggie/Graduate\ School/Project1-GluCEST-rsfMRI/7T_BIDS_and_DICOMS/7T_${bblid}
+   mkdir ~/Desktop/Maggie/Graduate\ School/Project1-GluCEST-rsfMRI/7T_BIDS_and_DICOMS/7T_${bblid}/sub-${bblid}
+   mkdir ~/Desktop/Maggie/Graduate\ School/Project1-GluCEST-rsfMRI/7T_BIDS_and_DICOMS/7T_${bblid}/sub-${bblid}/ses-${session}/
+   mkdir ~/Desktop/Maggie/Graduate\ School/Project1-GluCEST-rsfMRI/7T_BIDS_and_DICOMS/7T_${bblid}/sub-${bblid}/ses-${session}/anat
+   mkdir ~/Desktop/Maggie/Graduate\ School/Project1-GluCEST-rsfMRI/7T_BIDS_and_DICOMS/7T_${bblid}/sub-${bblid}/ses-${session}/func
+   mkdir ~/Desktop/Maggie/Graduate\ School/Project1-GluCEST-rsfMRI/7T_BIDS_and_DICOMS/7T_${bblid}/sub-${bblid}/ses-${session}/fmap
+   cp ~/Desktop/Maggie/Graduate\ School/Project1-GluCEST-rsfMRI/7T_BIDS_and_DICOMS/dataset_description.json ~/Desktop/Maggie/Graduate\ School/Project1-GluCEST-rsfMRI/7T_BIDS_and_DICOMS/7T_${bblid}
+    
 2. Put dicoms in their own folder within one big folder and scp all into PMACS
-
+   # mkdirs
+   mkdir ~/Desktop/Maggie/Graduate\ School/Project1-GluCEST-rsfMRI/7T_BIDS_and_DICOMS/7T_Dicoms/${bblid}_dicoms
+   mkdir ~/Desktop/Maggie/Graduate\ School/Project1-GluCEST-rsfMRI/7T_BIDS_and_DICOMS/7T_Dicoms/${bblid}_dicoms/anat
+   mkdir ~/Desktop/Maggie/Graduate\ School/Project1-GluCEST-rsfMRI/7T_BIDS_and_DICOMS/7T_Dicoms/${bblid}_dicoms/func
+   mkdir ~/Desktop/Maggie/Graduate\ School/Project1-GluCEST-rsfMRI/7T_BIDS_and_DICOMS/7T_Dicoms/${bblid}_dicoms/fmap
+   
+   # mv files into respective folders. Then, scp dicom folder to PMACS:
+   scp -r ~/Desktop/Maggie/Graduate\ School/Project1-GluCEST-rsfMRI/7T_BIDS_and_DICOMS/7T_Dicoms/${bblid}_dicoms/ pecsok@bblsub.pmacs.upenn.edu:/project/bbl_roalf_22qmidline/maggiesandbox/subject/7T/dicoms/
+ 
 3. unzip asdf.dicom.zip 
 
 4. module load dcm2niix 
@@ -17,7 +33,10 @@ To BIDSify 7T data:
 5. dcm2niix * (Generates niis plus the json file)
 
 6. scp the jsons back to local. Delete *.dcm and *.nii to save space. 
-
+   scp -r pecsok@bblsub.pmacs.upenn.edu:/project/bbl_roalf_22qmidline/maggiesandbox/subject/7T/dicoms/anat/[dicom_name] ~/Desktop/Maggie/Graduate\ School/Project1-GluCEST-rsfMRI/7T_BIDS_and_DICOMS/7T_[bblid]/sub-[bblid]/ses-[###]/anat
+   scp -r pecsok@bblsub.pmacs.upenn.edu:/project/bbl_roalf_22qmidline/maggiesandbox/subject/7T/dicoms/func/[dicom_name] ~/Desktop/Maggie/Graduate\ School/Project1-GluCEST-rsfMRI/7T_BIDS_and_DICOMS/7T_[bblid]/sub-[bblid]/ses-[###]/func
+   scp -r pecsok@bblsub.pmacs.upenn.edu:/project/bbl_roalf_22qmidline/maggiesandbox/subject/7T/dicoms/fmap/[dicom_name] ~/Desktop/Maggie/Graduate\ School/Project1-GluCEST-rsfMRI/7T_BIDS_and_DICOMS/7T_[bblid]/sub-[bblid]/ses-[###]/fmap
+ 
 7. BIDSify json and nii.gz filenames: 
    generic format: 
    sub-[subj]_ses-[ses#]_task-rest_bold.json
@@ -37,13 +56,15 @@ To BIDSify 7T data:
    
 10. Submit subject folder to BIDS validator:
     https://bids-standard.github.io/bids-validator/
-
+   
 11. If valid, scp subject folder into PMACS! Ready to run fMRIprep!
     Current folder (To be updated soon): /project/bbl_roalf_22qmidline/maggiesandbox/subject/7T/7T_2/
-
 
 To run fMRI prep: 
 QUEUE=bbl ibash
 bsub "sh fmriprep_nick.sh"
 
 *Note: Do not need to run "ssh singularity01" since singularity image is already installed. 
+
+
+
