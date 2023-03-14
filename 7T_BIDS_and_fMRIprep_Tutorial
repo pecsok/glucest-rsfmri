@@ -10,10 +10,10 @@ To BIDSify 7T data:
    bblid=#####
    mkdir ~/Desktop/Maggie/Graduate\ School/Project1-GluCEST-rsfMRI/7T_BIDS_and_DICOMS/7T_${bblid}
    mkdir ~/Desktop/Maggie/Graduate\ School/Project1-GluCEST-rsfMRI/7T_BIDS_and_DICOMS/7T_${bblid}/sub-${bblid}
-   mkdir ~/Desktop/Maggie/Graduate\ School/Project1-GluCEST-rsfMRI/7T_BIDS_and_DICOMS/7T_${bblid}/sub-${bblid}/ses-${session}/
-   mkdir ~/Desktop/Maggie/Graduate\ School/Project1-GluCEST-rsfMRI/7T_BIDS_and_DICOMS/7T_${bblid}/sub-${bblid}/ses-${session}/anat
-   mkdir ~/Desktop/Maggie/Graduate\ School/Project1-GluCEST-rsfMRI/7T_BIDS_and_DICOMS/7T_${bblid}/sub-${bblid}/ses-${session}/func
-   mkdir ~/Desktop/Maggie/Graduate\ School/Project1-GluCEST-rsfMRI/7T_BIDS_and_DICOMS/7T_${bblid}/sub-${bblid}/ses-${session}/fmap
+   mkdir ~/Desktop/Maggie/Graduate\ School/Project1-GluCEST-rsfMRI/7T_BIDS_and_DICOMS/7T_${bblid}/sub-${bblid}/ses-${ses}/
+   mkdir ~/Desktop/Maggie/Graduate\ School/Project1-GluCEST-rsfMRI/7T_BIDS_and_DICOMS/7T_${bblid}/sub-${bblid}/ses-${ses}/anat
+   mkdir ~/Desktop/Maggie/Graduate\ School/Project1-GluCEST-rsfMRI/7T_BIDS_and_DICOMS/7T_${bblid}/sub-${bblid}/ses-${ses}/func
+   mkdir ~/Desktop/Maggie/Graduate\ School/Project1-GluCEST-rsfMRI/7T_BIDS_and_DICOMS/7T_${bblid}/sub-${bblid}/ses-${ses}/fmap
    cp ~/Desktop/Maggie/Graduate\ School/Project1-GluCEST-rsfMRI/7T_BIDS_and_DICOMS/dataset_description.json ~/Desktop/Maggie/Graduate\ School/Project1-GluCEST-rsfMRI/7T_BIDS_and_DICOMS/7T_${bblid}
     
 2. Put dicoms in their own folder within one big folder and scp all into PMACS
