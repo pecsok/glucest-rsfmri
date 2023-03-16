@@ -1,0 +1,65 @@
+**Process for running XCPEngine on a new group of subjects:**
+​
+NOTE: fMRIprep must have been ran on these subjects already for this to work. To run fmriprep see the other instructions.
+​
+In general, I have fMRIprep ran for all subjects already, so I usually symbolically link that fmriprep folder into the `outputs/derivative/`
+folder of the current project. That works to run most of the steps below. However, Docker does not allow for symbolic links during mounting so instruction 3.1 must conatin the path to the original fMRIprep folder (i.e. `/project/davis_group/elicorn/projects/fMRIpreproc/derivatives/fmriprep`). 
+​
+1. Edit the `run_xcp.sh` file. 
+	1. Make sure the paths in the first 20 lines of code are correct. Go one by one until they are all correct
+		1. Check that the design matrix is correctly specified (see step 8 below) - no `.dsn` at the end of the name!
+		2. Check that the project name (e.g. the name of the main folder where things are saved) is correct
+		3. Check that the base directory is correct
+		4. Check that the singularity image is mapping to the correct path
+		5. Check that the output directory exists and that the path is specified correctly
+		6. Make sure that the derivatives directory is specified correctly (there is usually no need to change this)
+		7. Make sure the log directory is correct
+		8. Make sure the path to the design matrix is correct
+		9. Make sure the subject list extists and is being read from the correct folder
+	2. Make sure the path for the cohort file is specified, and that the cohort file is generated
+2. To generate the cohort file:
+	1. Make a `cohort_files` folder within the derivatives folder, usually something like: `/outputs/derivatives/cohort_files`
+	2. Go to the `code` folder, there should be a file called: `cohort_files.py`
+		1. Make sure the project name and the base of the fmriprep file to be used for analysis is correct. 
+			1. For the fmriprep base it can be found in the fmriprep outputs here: `/fmriprep/sub-RID0XXX/ses-research3Tv03/func`. It will most likely be something like this: `task-rest_space-T1w_desc-preproc_bold.nii.gz`
+	3. Run the `cohort_files.py` script:
+		1. Activate the bsc queue: `QUEUE=bsc ibash`
+		2. Execute: `python cohort_files.py`
+3. Edit the `xcp.sh` file:
+	1. Make sure the line that specifies the `-r` flag has the correct project name and maps to the correct fmriprep directory **relative to the `/mnt` path**.
+4. Run the job:
+	1. Make sure the queue is active: `QUEUE=bsc ibash`
+	2. Submit the `run_xcp.sh`  script: `bsub < run_xcp.sh`
+	3. Check if things are running: `bjobs`
+5. Troubleshooting:
+	1. Go to the log directory: `logfiles/xcp_designXXX`
+	2. Check the `subXXX.eYYY` and `subXXX.oYYY` for the subject that failed to check why things were not working
+​
+`run_xcp.sh`
+```bash
+#!/bin/bash
+set -euxo pipefail
+​
+module load singularity
+​
+DESIGN=fc-36p_no_wm_regress_despike 
+PROJECT_NAME=ieeg_fmri_penn
+PREFIX=/project # specify bind point
+BASE=/davis_group/allucas/ # specify home directory relative to bind point in singularity
+xcp=/project/davis_group/elicorn/images_pmacs/xcpEngine.simg # relative path to xcp image
+OUTDIR=${BASE}projects/${PROJECT_NAME}/outputs/
+DERIVDIR=${OUTDIR}derivatives/$DESIGN/ && mkdir -p ${PREFIX}${DERIVDIR} # relative path to output folder and generate it
+LOGDIR=${PREFIX}${BASE}projects/${PROJECT_NAME}/logfiles/$DESIGN/ && mkdir -p ${LOGDIR} # path to directory to hold log files
+designFile=/davis_group/allucas/projects/${PROJECT_NAME}/code/design_files/${DESIGN}.dsn # path to desire xcp design file
+​
+#SUBJS=(RID0440 RID0445)
+readarray SUBJS < ${PREFIX}${BASE}projects/${PROJECT_NAME}/source_data/subject_list.txt
+​
+for SUBJ in "${SUBJS[@]}"; do
+        SUBJ=($(echo $SUBJ | cut -d '-' -f 2))
+        cohortFile=${OUTDIR}derivatives/cohort_files/cohort_file_sub-${SUBJ}.csv
+        echo "sub-${SUBJ} submitted"
+        bsub -J xcp_sub-$SUBJ -o ${LOGDIR}xcp_sub-$SUBJ.o%J -e ${LOGDIR}xcp_sub-$SUBJ.e%J "sh ${PREFIX}${BASE}projects/ieeg_
+fmri/jobs/xcp.sh $SUBJ $xcp ${DERIVDIR} $BASE $PREFIX $cohortFile $designFile"
+done
+```
