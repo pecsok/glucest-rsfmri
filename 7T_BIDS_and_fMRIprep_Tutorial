@@ -26,30 +26,33 @@ To BIDSify 7T data:
    # mv files into respective folders. Then, scp dicom folder to PMACS:
    scp -r ~/Desktop/Maggie/Graduate\ School/Project1-GluCEST-rsfMRI/7T_BIDS_and_DICOMS/7T_Dicoms/${bblid}_dicoms pecsok@bblsub.pmacs.upenn.edu:/project/bbl_roalf_22qmidline/maggiesandbox/subject/7T/dicoms/
  
-3. unzip asdf.dicom.zip 
-
-4. module load dcm2niix 
-
-5. dcm2niix * (Generates niis plus the json file)
+3. Unzip, convert to nii (generates niis plus the json file), then remove unneeded files:
+   module load dcm2niix
+   dcm2niix * 
    unzip *
    dcm2niix *
    rm *.dcm
    rm *.nii
+   rm *.zip
 
-6. scp UNI and INV2 files into PMACS: /project/bbl_roalf_22qmidline/maggiesandbox/subject/7T/dicoms/${bblid}_dicoms/anat2
-   scp -r ~/Desktop/Maggie/Graduate\ School/Project1-GluCEST-rsfMRI/7T_BIDS_and_DICOMS/7T_${bblid}/sub-${bblid}/ses-${ses}/anat/ pecsok@bblsub.pmacs.upenn.edu:/project/bbl_roalf_22qmidline/maggiesandbox/subject/7T/dicoms/${bblid}_dicoms/anat
-
-7. fslmaths to create mprage from UNI and INV2
+4. fslmaths to create mprage from UNI and INV2
    source /project/bbl_projects/apps/default_modules.sh 
-   fslmaths sub-${bblid}_ses-${ses}_T1w.nii.gz -mul sub-${bblid}_ses-${ses}_UNI.nii.gz sub-${bblid}_ses-${ses}_T1w
-   scp pecsok@bblsub.pmacs.upenn.edu:/project/bbl_roalf_22qmidline/maggiesandbox/subject/7T/dicoms/${bblid}_dicoms/anat/anat/sub-${bblid}_ses-${ses}_T1w_combined.nii.gz ~/Desktop/Maggie/Graduate\ School/Project1-GluCEST-rsfMRI/7T_BIDS_and_DICOMS/7T_${bblid}/sub-${bblid}/ses-${ses}/anat/  
+   fslmaths sub-${bblid}_ses-${ses}_T1w.nii.gz -mul sub-${bblid}_ses-${ses}_UNI.nii.gz sub-${bblid}_ses-${ses}_T1w   
    
-   
-6. scp the jsons and the mprage back to local. Delete *.dcm and *.nii to save space and time.
+6. scp the jsons and the mprage back to local.
    scp -r pecsok@bblsub.pmacs.upenn.edu:/project/bbl_roalf_22qmidline/maggiesandbox/subject/7T/dicoms/${bblid}_dicoms ~/Desktop/Maggie/Graduate\ School/Project1-GluCEST-rsfMRI/7T_BIDS_and_DICOMS/7T_Dicoms/${bblid}_dicoms/
  
 7. BIDSify json and nii.gz filenames: 
-   cd ~/Desktop/Maggie/Graduate\ School/Project1-GluCEST-rsfMRI/7T_BIDS_and_DICOMS/7T_${bblid}/sub-${bblid}/ses-${ses}
+   cd ~/Desktop/Maggie/Graduate\ School/Project1-GluCEST-rsfMRI/7T_BIDS_and_DICOMS/7T_${bblid}/sub-${bblid}/ses-${ses}/func
+   mv *.json sub-${bblid}_ses-${ses}_task-rest_bold.json
+   mv *.nii.gz sub-${bblid}_ses-${ses}_task-rest_bold.nii.gz
+   cd ../anat
+   mv *.json sub-${bblid}_ses-${ses}_T1w.json
+   mv *.nii.gz sub-${bblid}_ses-${ses}_T1w.nii.gz
+   cd ../fmap
+   mv *.json sub-${bblid}_ses-${ses}_dir-PA_run-1_epi.json
+   mv *.nii.gz sub-${bblid}_ses-${ses}_dir-PA_run-1_epi.nii.gz
+   
    generic format: 
    sub-${bblid}_ses-${ses}_task-rest_bold.json
    sub-${bblid}_ses-${ses}_dir-PA_run-1_epi.json
