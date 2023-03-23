@@ -41,7 +41,7 @@ To BIDSify 7T data:
 
 7. fslmaths to create mprage from UNI and INV2
    source /project/bbl_projects/apps/default_modules.sh 
-   fslmaths sub-${bblid}_ses-${ses}_T1w.nii.gz -mul sub-${bblid}_ses-${ses}_UNI.nii.gz sub-${bblid}_ses-${ses}_T1w.json
+   fslmaths sub-${bblid}_ses-${ses}_T1w.nii.gz -mul sub-${bblid}_ses-${ses}_UNI.nii.gz sub-${bblid}_ses-${ses}_T1w
    scp pecsok@bblsub.pmacs.upenn.edu:/project/bbl_roalf_22qmidline/maggiesandbox/subject/7T/dicoms/${bblid}_dicoms/anat/anat/sub-${bblid}_ses-${ses}_T1w_combined.nii.gz ~/Desktop/Maggie/Graduate\ School/Project1-GluCEST-rsfMRI/7T_BIDS_and_DICOMS/7T_${bblid}/sub-${bblid}/ses-${ses}/anat/  
    
    
