@@ -31,6 +31,8 @@ To BIDSify 7T data:
 4. module load dcm2niix 
 
 5. dcm2niix * (Generates niis plus the json file)
+   unzip *
+   dcm2niix *
    rm *.dcm
    rm *.nii
 
