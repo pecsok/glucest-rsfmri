@@ -49,15 +49,12 @@ To BIDSify 7T data:
    scp -r pecsok@bblsub.pmacs.upenn.edu:/project/bbl_roalf_22qmidline/maggiesandbox/subject/7T/dicoms/${bblid}_dicoms ~/Desktop/Maggie/Graduate\ School/Project1-GluCEST-rsfMRI/7T_BIDS_and_DICOMS/7T_Dicoms/${bblid}_dicoms/
  
 7. BIDSify json and nii.gz filenames: 
+   cd ~/Desktop/Maggie/Graduate\ School/Project1-GluCEST-rsfMRI/7T_BIDS_and_DICOMS/7T_${bblid}/sub-${bblid}/ses-${ses}
    generic format: 
    sub-${bblid}_ses-${ses}_task-rest_bold.json
    sub-${bblid}_ses-${ses}_dir-PA_run-1_epi.json
    sub-${bblid}_ses-${ses}_T1w.json
-     
-   examples:
-   sub-80557_ses-10738_task-rest_bold.json
-   sub-80557_ses-10738_dir-PA_run-1_epi.json
-   sub-80557_ses-10738_T1w.json
+
   
 8. Add the following line to the fmap json:
    "IntendedFor": ["ses-10738/func/sub-80557_ses-10738_task-rest_bold.nii.gz"],
