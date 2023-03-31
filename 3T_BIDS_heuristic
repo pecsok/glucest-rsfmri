@@ -44,14 +44,10 @@ AP_epi = create_key(
    'sub-{bblid}/{session}/fmap/sub-{bblid}_acq-dMRI_dir-AP_epi')
 ​
 PA_epi = create_key(
-   'sub-{bblid}/{session}/fmap/sub-{bblid}_acq-dMRI_dir-PA_epi')
+   'sub-{bblid}/{session}/fmap/sub-{bblid}_dir-PA_run-1_epi')
 ​
-topup = create_key(
-    'sub-{bblid}/{session}/fmap/sub-{bblid}_acq-dMRI_topup_epi')
-#b0_mag1 = create_key(
-#   'sub-{bblid}/{session}/fmap/sub-{bblid}_{session}_magnitude1')
-#b0_mag2 = create_key(
-#   'sub-{bblid}/{session}/fmap/sub-{bblid}_{session}_magnitude2')
+#topup = create_key(
+#    'sub-{bblid}/{session}/fmap/sub-{bblid}_acq-dMRI_topup_epi')
 ​
 #################################################################################
 ###########  Define rules to map scans to the correct BIDS filename  ############
@@ -69,26 +65,27 @@ def infotodict(seqinfo):
     """
 ​
     info = {t1w: [],
-        dwi: [], dwi_35: [], dwi_36: [],
-        #gre: [], gre_e1: [], gre_e2: [], gre_e2_ph: [],
         b0_phase: [], b0_phase1: [], b0_phase2: [],
         b0_mag: [], b0_mag1: [], b0_mag2: [], b0_phasediff: [],
-        AP_epi: [], PA_epi: [], topup: []
-        #rest: [], Ex: [], In: [], ER: [],
-        #asl: [], m0: []
+        AP_epi: [], PA_epi: [], topup: [],
+        rest: []
     }
 ​
-    def get_latest_series(key, s):
+## The get_latest_series function appends the series_id to correct key in info dictionary 
+## based on the key and s parameters passed to it.
+    def get_latest_series(key, s): 
         info[key].append(s.series_id)
 ​
+## Start to loop through items in  
     for s in seqinfo:
         protocol = s.protocol_name.lower()
 ​
+        ## ANAT
         if "MPRAGE" in s.series_description:
                 get_latest_series(t1w, s)
         elif "T1w" in s.series_description:
             get_latest_series(t1w, s)
-        #DWI
+        ## FUNC 
         elif "ABCD_dMRI" in s.series_description:
             #if "ABCD_dMRI_DistortionMap_PA" in s.series_description:
             #    continue
