@@ -113,34 +113,19 @@ def infotodict(seqinfo):
                 get_latest_series(PA_epi, s)
             else:
                 continue
-        elif "dwi-ABCD_dir-PA" in s.series_description:
-            get_latest_series(dwi, s)
-        elif "dwi-multishell_acq-103dir_dir-PA_seq_ABCD" in s.series_description:
-            get_latest_series(dwi, s)
-        elif "dwi_acq-multishell_dir-AP_dwi" in s.series_description:
-            get_latest_series(dwi, s)
-        elif "DTI" in s.series_description:
-            if "topup" in s.series_description:
-                get_latest_series(topup, s)
-            if "35" in s.series_description:
-                get_latest_series(dwi_35,s)
-            if "36" in s.series_description:
-                get_latest_series(dwi_36, s)
-            else:
-                get_latest_series(dwi, s)
-            get_latest_series(dwi, s)
-        elif "MULTISHELL" in s.series_description:
-            if "b2000" in s.series_description:
-                get_latest_series(dwi, s)
-            elif "topup" in s.series_description:
-                get_latest_series(topup, s)
-        elif "TRACEW" in s.series_description:
-            get_latest_series(dwi, s)
+
+            
         #FMAPS
-        #elif "B0map_onesizefitsall_v3" in s.series_description:
-        #    if s.dcm_dir_name.endswith("e1_ph.nii.gz"):
-        #        get_latest_series(b0_phase, s)
-        #    elif s.dcm_dir_name.endswith("_e1.nii.gz"):
+        elif "B0map_onesizefitsall_v3" in s.series_description:
+            if s.dcm_dir_name.endswith("ph.nii.gz"):
+                get_latest_series(b0_phase, s)
+            if s.dcm_dir_name.endswith("_ph.nii.gz"):
+                get_latest_series(b0_phase, s)
+            if "ph" in s.dcm_dir_name:
+                get_latest_series(b0_phase, s)
+        
+
+#    elif s.dcm_dir_name.endswith("_e1.nii.gz"):
         #        get_latest_series(b0_mag, s)
         #    elif s.dcm_dir_name.endswith("e2_ph.nii.gz"):
         #        get_latest_series(b0_phase, s)
@@ -173,8 +158,8 @@ def infotodict(seqinfo):
             else:
                 get_latest_series(b0_phasediff, s)
             #info[b0_phase].append(s.series_id)
-        #elif "B0map_onesizefitsall_v3" in s.series_description:
-        #    if "e1" in s.dcm_dir_name:
+        elif "B0map_onesizefitsall_v3" in s.series_description:
+            if "e1" in s.dcm_dir_name:
         #        if "ph" in s.dcm_dir_name:
         #            get_latest_series(b0_phase, s)
         #        else:
@@ -247,36 +232,8 @@ def infotodict(seqinfo):
     #]
 #}
 ​
-############################### Attach Extra Files ##############################
-# e.g. Used for attaching events.tsv files to sessions with fmri task scans
-# e.g. Used for attaching aslcontext.tsv file to sessions with asl scans
-​
-##def AttachToSession():
-​
-##    import pandas as pd
-​
-    # ToDo: fill in path to task events.tsv file
-##    df = pd.read_csv("<path_to_events_tsv_for_task_1>", sep='\t')
-​
-    # Define task 1 events.tsv file
-    # ToDo: replace <task_name_1> with actual task name, in variable and in string below.
-##    task_name_1_events = {
-##        'name': 'sub-{bblid}/{session}/func/sub-{bblid}_{session}_task-<task_name_1>_events.tsv',
-##        'data': df.to_csv(index=False, sep='\t'),
-##        'type': 'text/tab-separated-values'
-##    }
-​
-    # Define task 2 events.tsv file
-    # ToDo: replace <task_name_2> with actual task name, in variable and in string below.
-##    task_name_2_events = {
-##        'name': 'sub-{bblid}/{session}/func/sub-{bblid}_{session}_task-<task_name_2>_events.tsv',
-##        'data': df.to_csv(index=False, sep='\t'),
-##        'type': 'text/tab-separated-values'
-##    }
-​
-    # ToDo: Return list of task_name_events vars you just created.
-##    return [task_name_1_events, task_name_2_events]
-​
+
+
 ####################### Rename session and subject labels #######################
 # This function queries Flywheel to generate a dictionary (session_labels) that
 # maps the existing session label (sess.label) to a new session label in the
