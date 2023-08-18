@@ -7,7 +7,7 @@ General Analysis Plan:
 3.  Repeat steps with subject-specific functional networks
 
 Stage 1: BIDSify 3T and 7T Data 
-
+- Add these to the repo
 
 Stage 2: Run fMRI Prep
 - Need to mount singularity node
