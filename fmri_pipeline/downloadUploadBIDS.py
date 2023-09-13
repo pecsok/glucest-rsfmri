@@ -105,17 +105,24 @@ def main():
     projects = ["GRMPY_822831", "MOTIVE", "PNC_LG_810336", "SYRP_818621" ]
     for proj in projects:
         print("Gathering subject list for "+proj+"...\n")
-        subjects = pd.read_csv("/Users/pecsok/GluCEST_rsfMRI/glucestfmri/glucest_fmri_acquisitions.csv") # List of all GluCEST and fMRI acquisitions for project
-        
-        print("Downloading subject data...\n")
-        subjects2=[86486, 95257]
-        for subj in subjects2:
+        subjects_all = pd.read_csv('glucest_fmri_acquisitions.csv') # List of all GluCEST and fMRI acquisitions for project
+        subjects = subjects_all.loc[subjects_all['PROTOCOL_rs'] == proj]        
+        print("Downloading subject data from ",proj)
+        for subj in subjects:
             print("\n=============================")
             print("Processing subject {}".format(subj))
             subj=str(subj)
-            download_subject(subj, proj, '.', 'T1w', ['anat']) # you probably only want the t1s
-            upload_subject('.', 'ExtraLong') # modify as necessary
-
+            # Download all desired files
+            download_subject(subj, proj, '.', 'T1w', ['anat']) # anat
+            download_subject(subj, proj, '.', 'task-rest', ['func']) # func
+            # Download specific fmap used in corresponding study:
+            if proj == 'MOTIVE':
+                download_subject(subj, proj, '.', 'epi', ['fmap']) # fmap (Motive)
+            elif proj == ['GRMPY_822831','PNC_LG_810336','SYRP_818621']:
+                download_subject(subj, proj, '.', 'magnitude1', ['fmap']) # fmap (Motive)
+                download_subject(subj, proj, '.', 'magnitude2', ['fmap']) # fmap (Motive)
+                download_subject(subj, proj, '.', 'phasediff', ['fmap']) # fmap (Motive)
+            upload_subject('.', 'Penn_GluCEST') # Upload to flywheel folder for re-BIDSing
 
 if __name__ == '__main__':
     main()
