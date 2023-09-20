@@ -32,7 +32,12 @@ grp_df = pd.DataFrame(columns=columns)
 ###############################################################################
 # Import data, loop through subjects, and establish file paths
 # Add an if loop: If looping through folders, loop through folders. Else if only want to run one subj or use csv of subjs, hard-code subject and session ID
-if folder_input:
+if folder_input: # Globe function - import globe use to loop through all subj in a folder 
+    inpath
+    glob.glob(inpath + 'sub-*/asdfsdffilename.csv) # Generates list of all file names
+    subjlist_md = 
+    
+    allsubj_rsns = []
     for subj_path in os.listdir(input_path):
         # Extract bblid and session id FIX how to extract session:
         bblid = subj_path.split('-')[1]
@@ -44,15 +49,15 @@ if folder_input:
         # Add to running list of bblids for grp analysis later:
         bblids.append(bblid)
         sesids.append(ses)
-elif csv_input:
-    for n in range(len(subjs)): # input csv of bblids and session ids
-        # Construct the file path for the subject file FIX Make this correct
-        bblid = subjs['subj'][n]
-        ses = subjs['session'][n]
-        subj_path = f"{input_path}/sub-{bblid}/ses-{ses}"
-        # Add to running list of bblids for grp analysis later:
-        bblids.append(bblid)
-        sesids.append(ses)
+#elif csv_input:
+#    for n in range(len(subjs)): # input csv of bblids and session ids
+#        # Construct the file path for the subject file FIX Make this correct
+#        bblid = subjs['subj'][n]
+#        ses = subjs['session'][n]
+#        subj_path = f"{input_path}/sub-{bblid}/ses-{ses}"
+#        # Add to running list of bblids for grp analysis later:
+#        bblids.append(bblid)
+#        sesids.append(ses)
         
 ###############################################################################
 ##### Network FCON: Call fcon function and calculate network-level connectivity measures for subject and whole group
@@ -65,10 +70,16 @@ elif csv_input:
 
     # Calculate avg within-network connectivity for the current subject
     avg_fcon = subj_fcon(fcmat, networks_of_interest) 
-    
+    temp_df = pd.DataFrame(bblid, columns=["BBLID"])
+    temp_df["Session"] = ses
+    temp_df[networks_of_interest] = avg_fcon
+              
     # Append the subject's data as a new row to the DataFrame
-    grp_df = grp_df.append({"BBLID": bblid, "Session": ses, "Avg_fcon": avg_fcon}, ignore_index=True)
-    # Fix. if OOP: Subj.fcmat = fc.subj_fcon(fmat)?
+    grp_df = grp_df.append(temp_df, ignore_index=True)
+              
+              
+              
+ #   grp_df = grp_df.append({"BBLID": bblid, "Session": ses, "Avg_fcon": avg_fcon}, ignore_index=True)
     
      
 ###############################################################################
