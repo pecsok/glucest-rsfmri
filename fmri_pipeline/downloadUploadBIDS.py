@@ -50,6 +50,8 @@ def download_subject(subj_label, source_proj, dest_path, acqs, folders):
     command = ['fw-heudiconv-export', '--proj', source_proj, '--subject', subj_label, '--path', dest_path, '--folders']
     command.extend(folders)
     while True:
+        print(command)
+        print(folders)
         print("Trying fw-heudiconv...")
         p = sub.Popen(command, stdout=sub.PIPE, stdin=sub.PIPE, stderr=sub.PIPE, universal_newlines=True)
         p_is_hanging = wait_timeout(p, 120)
@@ -104,11 +106,11 @@ def upload_subject(path, dest_proj):
 
 
 def main():
-    projects = ["GRMPY_822831", "MOTIVE", "PNC_LG_810336", "SYRP_818621" ]
+    projects = ["GRMPY_822831" ] # , "MOTIVE", "PNC_LG_810336", "SYRP_818621"
     for proj in projects:
         print("Gathering subject list for "+proj+"...\n")
         subjects_all = pd.read_csv('glucest_fmri_acquisitions.csv') # List of all GluCEST and fMRI acquisitions for project
-        subjects = subjects_all.loc[subjects_all['PROTOCOL_rs'] == proj]        
+        subjects = subjects_all[subjects_all['PROTOCOL_rs'] == proj]['BBLID']
         print("Downloading subject data from ",proj)
         for subj in subjects:
             print("\n=============================")
