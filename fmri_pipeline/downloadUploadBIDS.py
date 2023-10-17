@@ -40,7 +40,7 @@ def wait_timeout(proc, seconds):
             return True
         time.sleep(interval)
 
-download_subject(subj, proj, '.', 'T1w', ['anat']) # anat
+#download_subject(subj, proj, '.', 'T1w', ['anat']) # anat
 
 def download_subject(subj_label, source_proj, dest_path, acqs, folders):
     '''
@@ -99,18 +99,19 @@ def upload_subject(path, dest_proj):
     #tidy(path) #optional of course
     print("Uploading subject data...")
     print(dest_proj)
-    p2 = sub.Popen(['fw', 'import', 'bids', '--project', dest_proj, '{}/bids_directory/'.format(path), 'bbl'], stdout=sub.PIPE, stdin=sub.PIPE, stderr=sub.PIPE, universal_newlines=True)
+    #p2 = sub.Popen(['fw', 'import', 'bids', '--project', dest_proj, '{}/bids_directory/'.format(path), 'bbl'], stdout=sub.PIPE, stdin=sub.PIPE, stderr=sub.PIPE, universal_newlines=True)
+    p2 = sub.Popen(['fw', 'ingest', 'folder', './bids_directory/', '-g', 'bbl', '-p', 'Penn_GluCEST'], stdout=sub.PIPE, stdin=sub.PIPE, stderr=sub.PIPE, universal_newlines=True)
     out, err = p2.communicate(input="yes\n")
     print(out)
     p3 = sub.Popen(['rm', '-rf', 'bids_directory/'], stdout=sub.PIPE, stdin=sub.PIPE, stderr=sub.PIPE, universal_newlines=True)
 
 
 def main():
-    projects = ["GRMPY_822831", "MOTIVE", "PNC_LG_810336", "SYRP_818621"]
+    projects = ["MOTIVE","22Q_812481","CONTE_815814", "PNC_LG_810336", "SYRP_818621"]
     for proj in projects:
         print("Gathering subject list for "+proj+"...\n")
         subjects_all = pd.read_csv('glucest_fmri_acquisitions.csv') # List of all GluCEST and fMRI acquisitions for project
-        subjects = subjects_all[(subjects_all['PROTOCOL_rs'] == proj]) & (subjects_all['Transferred' == 0)]['BBLID']
+        subjects = subjects_all[(subjects_all['PROTOCOL_rs'] == proj) & (subjects_all['Transferred'] == 0)]['BBLID']
         print("Downloading subject data from ",proj)
         for subj in subjects:
             print("\n=============================")
