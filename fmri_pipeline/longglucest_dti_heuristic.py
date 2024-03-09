@@ -22,40 +22,16 @@ t1w = create_key(
 #dwi
 dwi = create_key(
     'sub-{subject}/ses-{session}/dwi/sub-{subject}_ses-{session}_dwi')
-dwi_35 = create_key(
-    'sub-{subject}/ses-{session}/dwi/sub-{subject}_ses-{session}_35_dwi')
-dwi_36 = create_key(
-    'sub-{subject}/ses-{session}/dwi/sub-{subject}_ses-{session}_36_dwi')
+dwi_20 = create_key(
+    'sub-{subject}/ses-{session}/dwi/sub-{subject}_ses-{session}_20_dwi')
 
 #fmap
-b0_phase = create_key(
-   'sub-{subject}/{session}/fmap/sub-{subject}_{session}_phase{item}')
-b0_phase1 = create_key(
-    'sub-{subject}/{session}/fmap/sub-{subject}_{session}_phase1')
-b0_phase2 = create_key(
-    'sub-{subject}/{session}/fmap/sub-{subject}_{session}_phase2')
-b0_phasediff = create_key(
-   'sub-{subject}/{session}/fmap/sub-{subject}_{session}_phasediff'
-)
-
-b0_mag = create_key(
-   'sub-{subject}/{session}/fmap/sub-{subject}_{session}_magnitude{item}')
-b0_mag1 = create_key(
-   'sub-{subject}/{session}/fmap/sub-{subject}_{session}_magnitude1')
-b0_mag2 = create_key(
-   'sub-{subject}/{session}/fmap/sub-{subject}_{session}_magnitude2')
-AP_epi = create_key(
-   'sub-{subject}/{session}/fmap/sub-{subject}_acq-dMRI_dir-AP_epi')
-
-PA_epi = create_key(
-   'sub-{subject}/{session}/fmap/sub-{subject}_acq-dMRI_dir-PA_epi')
-
 topup = create_key(
     'sub-{subject}/{session}/fmap/sub-{subject}_acq-dMRI_topup_epi')
-#b0_mag1 = create_key(
-#   'sub-{subject}/{session}/fmap/sub-{subject}_{session}_magnitude1')
-#b0_mag2 = create_key(
-#   'sub-{subject}/{session}/fmap/sub-{subject}_{session}_magnitude2')
+
+# Ask: I don't think we need the qsm scan, but here is what I think the BIDS format would be if we do need it.
+qsm = create_key(
+    'sub-{subject}/ses-{session}/fmap/sub-{subject}_ses-{session}_Chimap')
 
 #################################################################################
 ###########  Define rules to map scans to the correct BIDS filename  ############
@@ -73,13 +49,7 @@ def infotodict(seqinfo):
     """
 
     info = {t1w: [],
-        dwi: [], dwi_35: [], dwi_36: [],
-        #gre: [], gre_e1: [], gre_e2: [], gre_e2_ph: [],
-        b0_phase: [], b0_phase1: [], b0_phase2: [],
-        b0_mag: [], b0_mag1: [], b0_mag2: [], b0_phasediff: [],
-        AP_epi: [], PA_epi: [], topup: []
-        #rest: [], Ex: [], In: [], ER: [],
-        #asl: [], m0: []
+        dwi: [], dwi_20: [], topup: []
     }
 
     def get_latest_series(key, s):
@@ -87,139 +57,30 @@ def infotodict(seqinfo):
 
     for s in seqinfo:
         protocol = s.protocol_name.lower()
-
-        if "MPRAGE" in s.series_description:
+        #ANAT
+        if "INV2" in s.series_description: # Ask which anatomical scan should we use? Previously "MPRAGE"
                 get_latest_series(t1w, s)
-        elif "T1w" in s.series_description:
+        elif "T1w" in s.series_description: # Ask: Probably remove this line bc multiple T1w acquisitions and only want to use one.
             get_latest_series(t1w, s)
-        #DWI
-        elif "ABCD_dMRI" in s.series_description:
-            #if "ABCD_dMRI_DistortionMap_PA" in s.series_description:
-            #    continue
-            if "DistortionMap_AP" in s.series_description:
-                get_latest_series(AP_epi, s)
-            elif "DistortionMap_PA" in s.series_description:
-                get_latest_series(PA_epi, s)
-            else:
-                get_latest_series(dwi, s)
-        #elif "dwi" in s.series_description:
-        #    if "AP_epi" in s.series_description:
-        #        get_latest_series(AP_epi, s)
-        #    elif "PA_epi" in s.series_description:
-        #        get_latest_series(PA_epi, s)
-        #    else:
-        #        get_latest_series(dwi, s)
-        elif "acq-dwi" in s.series_description:
-            if "AP_epi" in s.series_description:
-                get_latest_series(AP_epi, s)
-            elif "PA_epi" in s.series_description:
-                get_latest_series(PA_epi, s)
-            elif "dir-AP" in s.series_description:
-                get_latest_series(AP_epi, s)
-            elif "dir-PA" in s.series_description:
-                get_latest_series(PA_epi, s)
-            else:
-                continue
-        elif "dwi-ABCD_dir-PA" in s.series_description:
-            get_latest_series(dwi, s)
-        elif "dwi-multishell_acq-103dir_dir-PA_seq_ABCD" in s.series_description:
-            get_latest_series(dwi, s)
-        elif "dwi_acq-multishell_dir-AP_dwi" in s.series_description:
-            get_latest_series(dwi, s)
+        #DWI & FMAP
         elif "DTI" in s.series_description:
-            if "topup" in s.series_description:
+            if "20" in s.series_description:
+                get_latest_series(dwi_20,s)
+            if "TOPUP" in s.series_description:
                 get_latest_series(topup, s)
-            if "35" in s.series_description:
-                get_latest_series(dwi_35,s)
-            if "36" in s.series_description:
-                get_latest_series(dwi_36, s)
-            else:
-                get_latest_series(dwi, s)
-            get_latest_series(dwi, s)
-        elif "MULTISHELL" in s.series_description:
-            if "b2000" in s.series_description:
-                get_latest_series(dwi, s)
-            elif "topup" in s.series_description:
-                get_latest_series(topup, s)
-        elif "TRACEW" in s.series_description:
-            get_latest_series(dwi, s)
-        #FMAPS
-        #elif "B0map_onesizefitsall_v3" in s.series_description:
-        #    if s.dcm_dir_name.endswith("e1_ph.nii.gz"):
-        #        get_latest_series(b0_phase, s)
-        #    elif s.dcm_dir_name.endswith("_e1.nii.gz"):
-        #        get_latest_series(b0_mag, s)
-        #    elif s.dcm_dir_name.endswith("e2_ph.nii.gz"):
-        #        get_latest_series(b0_phase, s)
-        #    elif s.dcm_dir_name.endswith("_e2.nii.gz"):
-        #        get_latest_series(b0_mag, s)
-        #    else:
-        #        get_latest_series(b0_phasediff, s)
-        #elif "B0map_onesizefitsall_v3" in s.series_description and "M" in s.image_type:
-        #    if "e1" in s.dcm_dir_name:
-        #        get_latest_series(b0_mag1, s)
-        #    elif "e2" in s.dcm_dir_name:
-        #        get_latest_series(b0_mag2, s)
-            #info[b0_mag].append(s.series_id)
-        #elif "B0map_onesizefitsall_v3" in s.series_description and "P" in s.image_type:
-        #    if "e1" in s.dcm_dir_name:
-        #        get_latest_series(b0_phase1, s)
-        #    elif "e2" in s.dcm_dir_name:
-        #        get_latest_series(b0_phase2, s)
-        elif "B0map" in s.series_description and "M" in s.image_type:
-            if "e1" in s.dcm_dir_name:
-                get_latest_series(b0_mag1, s)
-            elif "e2" in s.dcm_dir_name:
-                get_latest_series(b0_mag2, s)
-            #info[b0_mag].append(s.series_id)
-        elif "B0map" in s.series_description and "P" in s.image_type:
-            if "e1" in s.dcm_dir_name:
-                get_latest_series(b0_phase1, s)
-            elif "e2" in s.dcm_dir_name:
-                get_latest_series(b0_phase2, s)
-            else:
-                get_latest_series(b0_phasediff, s)
-            #info[b0_phase].append(s.series_id)
-        #elif "B0map_onesizefitsall_v3" in s.series_description:
-        #    if "e1" in s.dcm_dir_name:
-        #        if "ph" in s.dcm_dir_name:
-        #            get_latest_series(b0_phase, s)
-        #        else:
-        #            get_latest_series(b0_mag, s)
-        #    elif "e2" in s.dcm_dir_name:
-        #        if "ph" in s.dcm_dir_name:
-        #            get_latest_series(b0_phase, s)
-        #        else:
-        #            get_latest_series(b0_mag, s)
-        #    else:
-        #        continue
-            #else:
-            #    continue
-        #elif "fmap" in s.series_description:
-        #    if "dir-AP" in s.series_description:
-        #        get_latest_series(AP_epi, s)
-        #    elif "dir-PA" in s.series_description:
-        #        get_latest_series(PA_epi, s)
-        elif "dMRIdistmap_dir-AP" in s.series_description:
-            get_latest_series(AP_epi, s)
-        elif "dMRIdistmap_dir-PA" in s.series_description:
-            get_latest_series(PA_epi, s)
-        #elif "fmap_acq-dMRIdistmap_dir-AP_epi" in protocol:
-        #    get_latest_series(AP_epi, s)
-        #elif "fmap_acq-dMRIdistmap_dir-PA_epi" in protocol:
-        #    get_latest_series(PA_epi, s)
-        #elif "fmap-ABCD_acq-dMRIdistmap_dir-PA" in s.series_description:
-        #    get_latest_series(PA_epi, s)
-        #elif "fmap-ABCD_acq-dMRIdistmap_dir-AP" in s.series_description:
-        #    get_latest_series(AP_epi, s)
-        #elif "DistortionMap_AP" in s.series_description:
-        #    get_latest_series(AP_epi, s)
-        #elif "DistortionMap_PA" in s.series_description:
-        #    get_latest_series(PA_epi, s)
-        else:
-            continue
-
+             else:
+                 continue
     return info
+
+
+
+
+
+
+
+
+
+
 
 #################################################################################
 ################     Additional metadata, Fieldmap intention,     ###############
