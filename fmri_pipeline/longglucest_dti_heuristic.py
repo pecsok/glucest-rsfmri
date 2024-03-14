@@ -18,6 +18,12 @@ def create_key(template, outtype=('nii.gz',), annotation_classes=None):
 #anat
 t1w = create_key(
     'sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_T1w')
+inv1 = create_key(
+    'sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_acq-inv1_T1w')
+inv2 = create_key(
+    'sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_acq-inv2_T1w')
+uni = create_key(
+    'sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_acq-uni_T1w')
 
 #dwi
 dwi = create_key(
@@ -27,7 +33,7 @@ dwi_20 = create_key(
 
 #fmap
 topup = create_key(
-    'sub-{subject}/{session}/fmap/sub-{subject}_acq-dMRI_topup_epi')
+    'sub-{subject}/{session}/fmap/sub-{subject}_acq-dMRI_epi')
 
 # Ask: I don't think we need the qsm scan, but here is what I think the BIDS format would be if we do need it.
 qsm = create_key(
@@ -48,7 +54,7 @@ def infotodict(seqinfo):
     subindex: sub index within group
     """
 
-    info = {t1w: [],
+    info = {t1w: [], inv1: [], inv2: [], uni: [],
         dwi: [], dwi_20: [], topup: []
     }
 
@@ -58,17 +64,22 @@ def infotodict(seqinfo):
     for s in seqinfo:
         protocol = s.protocol_name.lower()
         #ANAT
-        if "INV2" in s.series_description: # Ask which anatomical scan should we use? Previously "MPRAGE"
-                get_latest_series(t1w, s)
-        elif "T1w" in s.series_description: # Ask: Probably remove this line bc multiple T1w acquisitions and only want to use one.
+        if "_0.80mm_INV1" in s.series_description:
+            get_latest_series(inv1, s)
+        elif "_0.80mm_INV2" in s.series_description: 
+            get_latest_series(inv2, s)
+        elif "_0.80mm_UNI_Images" in s.series_description: 
+            get_latest_series(uni, s)
+        elif "_0.80mm_T1_images" in s.series_description: 
             get_latest_series(t1w, s)
-        #DWI & FMAP
-        elif "DTI" in s.series_description:
-            if "20" in s.series_description:
-                get_latest_series(dwi_20,s)
-            if "TOPUP" in s.series_description:
-                get_latest_series(topup, s)
-             else:
+
+#        #DWI & FMAP
+#        elif "DTI" in s.series_description:
+#            if "20" in s.series_description:
+#                get_latest_series(dwi_20,s)
+#            if "TOPUP" in s.series_description:
+#                get_latest_series(topup, s)
+#             else:
                  continue
     return info
 
