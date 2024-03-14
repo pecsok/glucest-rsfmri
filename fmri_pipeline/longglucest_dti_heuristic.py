@@ -33,7 +33,7 @@ dwi_20 = create_key(
 
 #fmap
 topup = create_key(
-    'sub-{subject}/{session}/fmap/sub-{subject}_acq-dMRI_epi')
+    'sub-{subject}/{session}/fmap/sub-{subject}_acq-dwi_epi')
 
 # Ask: I don't think we need the qsm scan, but here is what I think the BIDS format would be if we do need it.
 qsm = create_key(
@@ -74,12 +74,12 @@ def infotodict(seqinfo):
             get_latest_series(t1w, s)
 
 #        #DWI & FMAP
-#        elif "DTI" in s.series_description:
+        elif "DTI" in s.series_description:
 #            if "20" in s.series_description:
 #                get_latest_series(dwi_20,s)
-#            if "TOPUP" in s.series_description:
-#                get_latest_series(topup, s)
-#             else:
+            if "TOPUP" in s.series_description:
+                get_latest_series(topup, s)
+             else:
                  continue
     return info
 
