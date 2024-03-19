@@ -64,10 +64,14 @@ def infotodict(seqinfo):
     for s in seqinfo:
         protocol = s.protocol_name.lower()
         #ANAT
-        if "INV2" in s.series_description: # Ask which anatomical scan should we use? Previously "MPRAGE"
+        if "_0.80mm_INV1" in s.series_description: # Ask which anatomical scan should we use? Previously "MPRAGE"
+                get_latest_series(inv1, s)
+        elif "_0.80mm_INV2" in s.series_description:
+                get_latest_series(inv2, s)
+        elif "_0.80mm_UNI_Images" in s.series_description:
+                get_latest_series(uni, s)
+        elif "T1_images" in s.series_description: # Ask: Probably remove this line bc multiple T1w acquisitions and only want to use one.
                 get_latest_series(t1w, s)
-        elif "T1w" in s.series_description: # Ask: Probably remove this line bc multiple T1w acquisitions and only want to use one.
-            get_latest_series(t1w, s)
         #DWI & FMAP
         elif "DTI" in s.series_description:
             if "20" in s.series_description:
