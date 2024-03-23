@@ -1,0 +1,112 @@
+---
+title: "GluCEST-FC_postprocessing"
+output: html_document
+  rmdformats::robobook:
+    highlight: monochrome
+    lightbox: true
+    gallery: true
+date: "2024-02-20"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(tidyverse)
+library(ggplot2)
+
+#source("/cbica/projects/thalamocortical_development/software/rotate_parcellation/R/perm.sphere.p.R") This package is used for parcel-based spin testing.
+
+#https://www.middleprofessor.com/files/applied-biostatistics_bookdown/_book/adding-covariates-to-a-linear-model
+```
+
+
+# Prepare Data
+
+Environment statistics
+
+```{r, message=F, warning=F}
+setwd("/Users/pecsok/GluCESTfMRI/glucest-fmri")
+
+#list all .csv files in the environment results directory
+files <- list.files(getwd(), pattern = '.csv', ignore.case = T, full.names = F) 
+
+for(i in 1:length(files)){
+  filename <- files[i]
+  Rname <- gsub('.{4}$', '', filename)
+  x <- read.csv(filename, header = TRUE)
+  assign(Rname, x) 
+}
+rm(x)
+```
+
+Project-specific data
+
+```{r, message=F, warning=F}
+grp_df = read.csv('./fmri_pipeline/grp_df_3T.csv')
+diag_df = read.csv('./fmri_pipeline/diag_df_3T.csv')
+
+# Choose what to analyse
+networks = c("Cont", "Default", "DorsAttn", "Vis", "SalVentAttn", "SomMot", "Limbic")
+CESTnetworks = c("avgCEST_Cont", "ctCEST_Cont", "avgCEST_Default", "ctCEST_Default","avgCEST_SomMot", "ctCEST_SomMot", "avgCEST_DorsAttn", "ctCEST_DorsAttn", "avgCEST_Vis", "ctCEST_Vis","avgCEST_Limbic", "ctCEST_Limbic",  "avgCEST_SalVentAttn","ctCEST_SalVentAttn")
+CNB_scores = c("tap_tot", "er40_cr", "medf_pc")
+CNB_valids = c("tap_valid", "er40_valid", "medf_valid") #, 
+diag_scores = c("dx_pscat") # ,"axis1_desc1","axis1_stat1"
+demo_scores = c("sex", "age", "race","ethnic","dateDiff")
+diag_details = c("axis1_desc1", "axis1_desc2", "axis1_desc3","axis1_desc4","axis1_desc5", "axis1_desc6")
+
+covariate_age = 'age' 
+covariate_sex = 'sex'
+covariate_ct = 'count'
+```
+
+
+## QC Analyses
+```{r, message=F, warning=F}
+# Histograms
+vars = c('age', 'tap_tot', 'SomMot', 'avgCEST_SomMot', 'ctCEST_SomMot')
+for (var in vars) {
+  print(var)
+  hist(grp_df[[var]],
+       main=paste("Histogram of", var,sep=" "),
+       xlab=paste(var))
+}
+```
+## QC Demographic variables
+```{r, message=F, warning=F}
+# Bar graph comparing M and F SomMot and FC.
+```
+
+## Linear Models 
+```{r, message=F, warning=F}
+# linear model of GluCEST vs tapping corrected for age
+m1 <- lm(tap_tot ~ avgCEST_SomMot + age + sex, data = grp_df)
+
+gg <- ggplot(grp_df, 
+             aes(x = avgCEST_SomMot,
+                 y = tap_tot)) + #, color=hstatus
+  geom_point() + #aes(color=treatment)
+  geom_smooth(method = "lm",
+              mapping = aes(y = predict(m1, grp_df))) +
+  ylab("Tapping Score") +
+  xlab("SomMot GluCEST") +
+ # theme_pander() +
+  theme(legend.position="bottom") 
+
+gg
+
+# Fix this loop 
+for (network in networks) {
+  gg <- ggplot(grp_df, 
+             aes(x = network,
+                 y = tap_tot)) + 
+    geom_point() + #aes(color=treatment)
+    geom_smooth(method = "lm",
+              mapping = aes(y = predict(m1, grp_df))) +
+  ylab("Area of necrosis (mg)") +
+  xlab("Area at risk (mg)") +
+ # theme_pander() +
+  theme(legend.position="bottom") 
+  
+  gg
+}
+```
