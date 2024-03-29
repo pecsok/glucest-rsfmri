@@ -8,6 +8,7 @@ output: html_document
 date: "2024-02-20"
 ---
 
+# Load packages and set up environment
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(dplyr)
@@ -32,7 +33,7 @@ files <- list.files(getwd(), pattern = '.csv', ignore.case = T, full.names = F)
 
 for(i in 1:length(files)){
   filename <- files[i]
-  Rname <- gsub('.{4}$', '', filename)
+  Rname <- gsub('.{4}$', '', filename) # Removes last 4 chars from filename (".csv")
   x <- read.csv(filename, header = TRUE)
   assign(Rname, x) 
 }
