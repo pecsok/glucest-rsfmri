@@ -8,7 +8,7 @@ output: html_document
 date: "2024-02-20"
 ---
 
-# Load packages and set up environment
+# Load packages 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(dplyr)
@@ -20,37 +20,28 @@ library(ggplot2)
 #https://www.middleprofessor.com/files/applied-biostatistics_bookdown/_book/adding-covariates-to-a-linear-model
 ```
 
-
-# Prepare Data
-
-Environment statistics
-
+# Set up Environment
 ```{r, message=F, warning=F}
-setwd("/Users/pecsok/GluCESTfMRI/glucest-fmri")
+setwd("~/GluCESTfMRI/glucest-rsfmri")
 
-#list all .csv files in the environment results directory
-files <- list.files(getwd(), pattern = '.csv', ignore.case = T, full.names = F) 
-
-for(i in 1:length(files)){
-  filename <- files[i]
-  Rname <- gsub('.{4}$', '', filename) # Removes last 4 chars from filename (".csv")
-  x <- read.csv(filename, header = TRUE)
-  assign(Rname, x) 
-}
-rm(x)
 ```
 
-Project-specific data
-
+# Set Variables
 ```{r, message=F, warning=F}
-grp_df = read.csv('./fmri_pipeline/grp_df_3T.csv')
-diag_df = read.csv('./fmri_pipeline/diag_df_3T.csv')
+# Set fieldstrength and read in group data:
+fieldstrength= "3T"
+grp_df <- read_grp_data(fieldstrength,'grp_df_') 
+diag_df = read_grp_data(fieldstrength,'diag_df_')
+```
 
 # Choose what to analyse
-networks = c("Cont", "Default", "DorsAttn", "Vis", "SalVentAttn", "SomMot", "Limbic")
-CESTnetworks = c("avgCEST_Cont", "ctCEST_Cont", "avgCEST_Default", "ctCEST_Default","avgCEST_SomMot", "ctCEST_SomMot", "avgCEST_DorsAttn", "ctCEST_DorsAttn", "avgCEST_Vis", "ctCEST_Vis","avgCEST_Limbic", "ctCEST_Limbic",  "avgCEST_SalVentAttn","ctCEST_SalVentAttn")
-CNB_scores = c("tap_tot", "er40_cr", "medf_pc")
-CNB_valids = c("tap_valid", "er40_valid", "medf_valid") #, 
+```{r, message=F, warning=F}
+networks = c( "Vis", "SalVentAttn", "SomMot") #"Cont", "Default", "DorsAttn",, "Limbic"
+CESTnetworks = c("avgCEST_SomMot", "avgCEST_DorsAttn",  "avgCEST_Vis" ) # "avgCEST_Cont", "ctCEST_Cont", "avgCEST_Default", "ctCEST_Default",,"avgCEST_Limbic", "ctCEST_Limbic",  "avgCEST_SalVentAttn","ctCEST_SalVentAttn"
+CESTcts = c("ctCEST_SomMot", "ctCEST_DorsAttn","ctCEST_Vis")
+
+CNB_scores = c("tap_tot")
+CNB_valids = c("tap_valid") #, 
 diag_scores = c("dx_pscat") # ,"axis1_desc1","axis1_stat1"
 demo_scores = c("sex", "age", "race","ethnic","dateDiff")
 diag_details = c("axis1_desc1", "axis1_desc2", "axis1_desc3","axis1_desc4","axis1_desc5", "axis1_desc6")
@@ -58,13 +49,15 @@ diag_details = c("axis1_desc1", "axis1_desc2", "axis1_desc3","axis1_desc4","axis
 covariate_age = 'age' 
 covariate_sex = 'sex'
 covariate_ct = 'count'
-```
 
+grp_df$'age' <- as.numeric(grp_df$'age')
+
+```
 
 ## QC Analyses
 ```{r, message=F, warning=F}
 # Histograms
-vars = c('age', 'tap_tot', 'SomMot', 'avgCEST_SomMot', 'ctCEST_SomMot')
+vars = c(CESTnetworks, CNB_scores, covariate_age)
 for (var in vars) {
   print(var)
   hist(grp_df[[var]],
@@ -72,6 +65,7 @@ for (var in vars) {
        xlab=paste(var))
 }
 ```
+
 ## QC Demographic variables
 ```{r, message=F, warning=F}
 # Bar graph comparing M and F SomMot and FC.
@@ -80,8 +74,9 @@ for (var in vars) {
 ## Linear Models 
 ```{r, message=F, warning=F}
 # linear model of GluCEST vs tapping corrected for age
-m1 <- lm(tap_tot ~ avgCEST_SomMot + age + sex, data = grp_df)
 
+# SomMot GluCEST vs Tapping Score
+m1 <- lm(tap_tot ~ avgCEST_SomMot + age + sex, data = grp_df)
 gg <- ggplot(grp_df, 
              aes(x = avgCEST_SomMot,
                  y = tap_tot)) + #, color=hstatus
@@ -92,22 +87,61 @@ gg <- ggplot(grp_df,
   xlab("SomMot GluCEST") +
  # theme_pander() +
   theme(legend.position="bottom") 
-
 gg
 
-# Fix this loop 
-for (network in networks) {
-  gg <- ggplot(grp_df, 
-             aes(x = network,
-                 y = tap_tot)) + 
+# Vis GluCEST vs Tapping Score
+m1 <- lm(tap_tot ~ avgCEST_Vis + age + sex, data = grp_df)
+gg <- ggplot(grp_df, 
+             aes(x = avgCEST_Vis,
+                 y = tap_tot)) + #, color=hstatus
+  geom_point() + #aes(color=treatment)
+  geom_smooth(method = "lm",
+              mapping = aes(y = predict(m1, grp_df))) +
+  ylab("Tapping Score") +
+  xlab("Vis GluCEST") +
+ # theme_pander() +
+  theme(legend.position="bottom") 
+gg
+
+```
+
+## Linear Models Broken Loop
+``{r, message=F, warning=F}
+# Fix this loop. Trying to loop through networks to plot. 
+CESTnetworks = c(avgCEST_SomMot, avgCEST_DorsAttn,  avgCEST_Vis) 
+for (CESTnetwork in CESTnetworks) {
+  graph_df = grp_df
+  graph_df %>% drop_na(CESTnetwork, 'tap_tot', 'age')
+  m1 <- lm(tap_tot ~ avgCEST_SomMot + age, data = graph_df) # 'sex',
+  gg <- ggplot(graph_df, 
+             aes(x = CESTnetwork,
+                 y = 'tap_tot')) + 
     geom_point() + #aes(color=treatment)
     geom_smooth(method = "lm",
-              mapping = aes(y = predict(m1, grp_df))) +
+              mapping = aes(y = predict(m1, graph_df))) +
   ylab("Area of necrosis (mg)") +
   xlab("Area at risk (mg)") +
  # theme_pander() +
   theme(legend.position="bottom") 
   
-  gg
+  print(gg)
 }
+``
+
+## Multiple regression
+```{r, message=F, warning=F}
+# Make a bar graph with all avg CEST values for each network
+# Run t test comparing all networks.
+
+
 ```
+
+## Compare Network CEST
+```{r, message=F, warning=F}
+# Make a bar graph with all avg CEST values for each network
+# Run t test comparing all networks' CEST
+# Run t test comparing network CEST in healthy vs control subjs
+
+```
+
+
