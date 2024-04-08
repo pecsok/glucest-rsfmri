@@ -1,10 +1,11 @@
 ---
 title: "GluCEST-FC_postprocessing"
-output: html_document
-  rmdformats::robobook:
-    highlight: monochrome
-    lightbox: true
-    gallery: true
+output: 
+  html_document:
+    rmdformats::robobook:
+      highlight: monochrome
+      lightbox: true
+      gallery: true
 date: "2024-02-20"
 ---
 
@@ -14,7 +15,9 @@ knitr::opts_chunk$set(echo = TRUE)
 library(dplyr)
 library(tidyverse)
 library(ggplot2)
+library(ggpmisc)
 
+source("/Users/pecsok/GluCESTfMRI/glucest-rsfmri/read_grp_data.R")
 #source("/cbica/projects/thalamocortical_development/software/rotate_parcellation/R/perm.sphere.p.R") This package is used for parcel-based spin testing.
 
 #https://www.middleprofessor.com/files/applied-biostatistics_bookdown/_book/adding-covariates-to-a-linear-model
@@ -36,8 +39,8 @@ diag_df = read_grp_data(fieldstrength,'diag_df_')
 
 # Choose what to analyse
 ```{r, message=F, warning=F}
-networks = c( "Vis", "SalVentAttn", "SomMot") #"Cont", "Default", "DorsAttn",, "Limbic"
-CESTnetworks = c("avgCEST_SomMot", "avgCEST_DorsAttn",  "avgCEST_Vis" ) # "avgCEST_Cont", "ctCEST_Cont", "avgCEST_Default", "ctCEST_Default",,"avgCEST_Limbic", "ctCEST_Limbic",  "avgCEST_SalVentAttn","ctCEST_SalVentAttn"
+networks = c("Cont", "Default", "DorsAttn", "Vis", "SalVentAttn", "SomMot","Limbic") #, 
+CESTnetworks = c("avgCEST_SomMot", "avgCEST_DorsAttn",  "avgCEST_Vis","avgCEST_Cont", "avgCEST_Default", "avgCEST_Limbic","avgCEST_SalVentAttn") #  "ctCEST_Cont", "ctCEST_Default",, "ctCEST_Limbic",  ,"ctCEST_SalVentAttn"
 CESTcts = c("ctCEST_SomMot", "ctCEST_DorsAttn","ctCEST_Vis")
 
 CNB_scores = c("tap_tot")
@@ -107,6 +110,7 @@ gg
 
 ## Linear Models Broken Loop
 ``{r, message=F, warning=F}
+
 # Fix this loop. Trying to loop through networks to plot. 
 CESTnetworks = c(avgCEST_SomMot, avgCEST_DorsAttn,  avgCEST_Vis) 
 for (CESTnetwork in CESTnetworks) {
@@ -132,15 +136,53 @@ for (CESTnetwork in CESTnetworks) {
 ```{r, message=F, warning=F}
 # Make a bar graph with all avg CEST values for each network
 # Run t test comparing all networks.
+# Vis GluCEST vs Tapping Score
+m1 <- lm(tap_tot ~ avgCEST_Vis + Vis + age + sex, data = grp_df)
+gg <- ggplot(grp_df, 
+             aes(x = avgCEST_Vis,
+                 y = tap_tot)) + #, color=hstatus
+  geom_point() + #aes(color=treatment)
+  geom_smooth(method = "lm",
+              mapping = aes(y = predict(m1, grp_df))) +
+  ylab("Tapping Score") +
+  xlab("Vis GluCEST") +
+ # theme_pander() +
+  theme(legend.position="bottom") +
+  stat_fit_glance(label.x = 15, label.y = 120, 
+                 mapping = aes(label = paste("R^2 = ", sprintf("%.2f", after_stat(r.squared)), 
+                                             "\np = ", sprintf("%.2e", after_stat(p.value)))),
+                 show.legend = TRUE) # Ensure the legend is displayed
+
+gg
 
 
 ```
+
 
 ## Compare Network CEST
 ```{r, message=F, warning=F}
 # Make a bar graph with all avg CEST values for each network
 # Run t test comparing all networks' CEST
-# Run t test comparing network CEST in healthy vs control subjs
+
+# Calculate the average of each network column
+cestavgs <- grp_df[, CESTnetworks]
+averages <- colMeans(cestavgs, na.rm = TRUE)
+sds <- apply(cestavgs, 2, sd, na.rm = TRUE)
+
+# Create a bar graph of the averages
+barplot(averages, main="Average Network Values", xlab="Network", ylab="Average Value",
+        names.arg=CESTnetworks, ylim = c(0,16))
+
+# Run pairwise t-tests on each pair of network columns
+pairwise_ttests <- lapply(columns_to_test, function(col) {
+  pairwise.t.test(df[[col]], df$grouping_variable, p.adjust.method = "none")
+})
+
+pairwise_ttests <- pairwise.t.test(df[, CESTnetworks], p.adjust.method = "none")
+
+# Print the results of the pairwise t-tests
+print(pairwise_ttests)
+
 
 ```
 
