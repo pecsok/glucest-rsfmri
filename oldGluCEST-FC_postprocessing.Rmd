@@ -17,7 +17,7 @@ library(tidyverse)
 library(ggplot2)
 library(ggpmisc)
 
-source("~/projects/GluCEST-fMRI/glucest-rsfmri/read_grp_data.R")
+source("/Users/pecsok/GluCESTfMRI/glucest-rsfmri/read_grp_data.R")
 #source("/cbica/projects/thalamocortical_development/software/rotate_parcellation/R/perm.sphere.p.R") This package is used for parcel-based spin testing.
 
 #https://www.middleprofessor.com/files/applied-biostatistics_bookdown/_book/adding-covariates-to-a-linear-model
@@ -25,7 +25,8 @@ source("~/projects/GluCEST-fMRI/glucest-rsfmri/read_grp_data.R")
 
 # Set up Environment
 ```{r, message=F, warning=F}
-setwd("/Users/pecsok/projects/GluCEST-fMRI/glucest-rsfmri")
+setwd("~/GluCESTfMRI/glucest-rsfmri")
+
 ```
 
 # Set Variables
@@ -56,11 +57,6 @@ grp_df$'age' <- as.numeric(grp_df$'age')
 
 ```
 
-## Data Scrubbing
-```{r, message=F, warning=F}
-# Replace sex and race numbers with strings
-```
-
 ## QC Analyses
 ```{r, message=F, warning=F}
 # Histograms
@@ -78,93 +74,42 @@ for (var in vars) {
 # Bar graph comparing M and F SomMot and FC.
 ```
 
-## Linear Models - CEST-age-tapping
+## Linear Models 
 ```{r, message=F, warning=F}
+# linear model of GluCEST vs tapping corrected for age
 
-# Initialize an empty list to store ggplot objects
-gg_list <- list()
+# SomMot GluCEST vs Tapping Score
+m1 <- lm(tap_tot ~ avgCEST_SomMot + age + sex, data = grp_df)
+gg <- ggplot(grp_df, 
+             aes(x = avgCEST_SomMot,
+                 y = tap_tot)) + #, color=hstatus
+  geom_point() + #aes(color=treatment)
+  geom_smooth(method = "lm",
+              mapping = aes(y = predict(m1, grp_df))) +
+  ylab("Tapping Score") +
+  xlab("SomMot GluCEST") +
+ # theme_pander() +
+  theme(legend.position="bottom") 
+gg
 
-for (CESTnetwork in CESTnetworks) {
-  graph_cols <- c(CESTnetwork, 'age', 'sex', 'tap_tot')
-  graph_df <- grp_df[complete.cases(grp_df[, graph_cols]), ]
-
-  # GluCEST vs Tapping Score 
-  formula_str <- paste("tap_tot ~", CESTnetwork, "+ age + sex")
-  m1 <- lm(formula_str, data = graph_df)
-  print(summary(m1))
-  r_squared <- summary(m1)$r.squared
-  p_value <- summary(m1)$coefficients[4, 4]
-  # Create plot
-  gg <- ggplot(graph_df, 
-               aes_string(x = CESTnetwork,
-                   y = "tap_tot")) + #, color=hstatus
-    geom_point() + #aes(color=treatment)
-    geom_smooth(method = "lm",
-                formula = y ~ x,
-                se = FALSE) +
-    annotate("text", x = Inf, y = -Inf, hjust = 1, vjust = 0, 
-             label = paste("R-squared =", round(r_squared, 3), "\n", "p-value =", round(p_value, 3)), 
-             size = 4) +
-    ylab("Tapping Score") +
-    xlab(paste(CESTnetwork, "GluCEST")) +
-   # theme_pander() +
-    theme(legend.position="bottom") 
-  # Add ggplot object to the list
-  gg_list[[CESTnetwork]] <- gg
-}
-
-# Print or display ggplot objects
-for (gg in gg_list) {
-  print(gg)
-}
+# Vis GluCEST vs Tapping Score
+m1 <- lm(tap_tot ~ avgCEST_Vis + age + sex, data = grp_df)
+gg <- ggplot(grp_df, 
+             aes(x = avgCEST_Vis,
+                 y = tap_tot)) + #, color=hstatus
+  geom_point() + #aes(color=treatment)
+  geom_smooth(method = "lm",
+              mapping = aes(y = predict(m1, grp_df))) +
+  ylab("Tapping Score") +
+  xlab("Vis GluCEST") +
+ # theme_pander() +
+  theme(legend.position="bottom") 
+gg
 
 ```
 
-## Linear Models - CEST-FC-age
-```{r, message=F, warning=F}
-
-# Initialize an empty list to store ggplot objects
-gg_list <- list()
-
-for (network in networks) {
-  CESTnetwork <- paste("avgCEST_", network, sep = "")
-  graph_cols <- c(network, CESTnetwork, 'age', 'sex')
-  graph_df <- grp_df[complete.cases(grp_df[, graph_cols]), ]
-
-  # GluCEST vs Tapping Score 
-  formula_str <- paste("tap_tot ~", CESTnetwork, "+ age + sex")
-  formula_str <- paste(CESTnetwork, " ~ age + sex +", network)
-  
-  m1 <- lm(formula_str, data = graph_df)
-  print(summary(m1))
-  r_squared <- summary(m1)$r.squared
-  p_value <- summary(m1)$coefficients[4, 4]
-  # Create plot
-  gg <- ggplot(graph_df, 
-               aes_string(x = network,
-                   y = CESTnetwork)) + #, color=hstatus
-    geom_point() + #aes(color=treatment)
-    geom_smooth(method = "lm",
-                formula = y ~ x,
-                se = FALSE) +
-    annotate("text", x = Inf, y = -Inf, hjust = 1, vjust = 0, 
-             label = paste("R-squared =", round(r_squared, 3), "\n", "p-value =", round(p_value, 3)), 
-             size = 4) +
-    ylab(CESTnetwork) +
-    xlab(paste(network, "FC")) +
-   # theme_pander() +
-    theme(legend.position="bottom") 
-  # Add ggplot object to the list
-  gg_list[[CESTnetwork]] <- gg
-}
-
-# Print or display ggplot objects
-for (gg in gg_list) {
-  print(gg)
-}
-
-```
-
+## Linear Models Broken Loop
+``{r, message=F, warning=F}
 
 # Fix this loop. Trying to loop through networks to plot. 
 CESTnetworks = c(avgCEST_SomMot, avgCEST_DorsAttn,  avgCEST_Vis) 
@@ -210,7 +155,9 @@ gg <- ggplot(grp_df,
 
 gg
 
+
 ```
+
 
 ## Compare Network CEST
 ```{r, message=F, warning=F}
