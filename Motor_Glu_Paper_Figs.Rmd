@@ -1,46 +1,51 @@
 ---
-title: "GluCEST-FC_postprocessing"
+title: "Motor_Glu_Paper_Figs"
 output: 
   html_document:
     rmdformats::robobook:
       highlight: monochrome
       lightbox: true
       gallery: true
-date: "2024-02-20"
+date: "2024-04-23"
 ---
 
-# Load packages 
+### Load packages 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = FALSE,
+                   #   out.width="49%",
+                   #   out.height="49%",
+                      fig.show='hold')
+                   #   fig.align='center')
 library(dplyr)
 library(tidyverse)
 library(ggplot2)
 library(ggpmisc)
+library(cowplot)
 
 source("~/projects/GluCEST-fMRI/glucest-rsfmri/read_grp_data.R")
 #source("/cbica/projects/thalamocortical_development/software/rotate_parcellation/R/perm.sphere.p.R") This package is used for parcel-based spin testing.
 
 #https://www.middleprofessor.com/files/applied-biostatistics_bookdown/_book/adding-covariates-to-a-linear-model
+
+# Markdown help:
+# https://bookdown.org/yihui/rmarkdown-cookbook/figures-side.html#fig:figures-side
 ```
 
-# Set up Environment
+### Set up Environment & Import Data
 ```{r, message=F, warning=F}
 setwd("/Users/pecsok/projects/GluCEST-fMRI/glucest-rsfmri/")
-```
 
-# Set Variables
-```{r, message=F, warning=F}
 # Set fieldstrength and read in group data:
 fieldstrength= "3T"
 grp_df <- read_grp_data(fieldstrength,'grp_df_') 
 diag_df = read_grp_data(fieldstrength,'diag_df_')
 ```
 
-# Choose what to analyse
+### Set Variables & Choose What to Analyse
 ```{r, message=F, warning=F}
-networks = c("Cont", "Default", "DorsAttn", "Vis", "SalVentAttn", "SomMot","Limbic") #, 
-CESTnetworks = c("avgCEST_SomMot", "avgCEST_DorsAttn",  "avgCEST_Vis","avgCEST_Cont", "avgCEST_Default", "avgCEST_Limbic","avgCEST_SalVentAttn") #  "ctCEST_Cont", "ctCEST_Default",, "ctCEST_Limbic",  ,"ctCEST_SalVentAttn"
-CESTcts = c("ctCEST_SomMot", "ctCEST_DorsAttn","ctCEST_Vis")
+networks = c("SomMot","Default") #, 
+CESTnetworks = c("avgCEST_SomMot","avgCEST_Default") #  "ctCEST_Cont", "ctCEST_Default",, "ctCEST_Limbic",  ,"ctCEST_SalVentAttn"
+CESTcts = c("ctCEST_SomMot","ctCEST_Default")
 
 CNB_scores = c("tap_tot")
 CNB_valids = c("tap_valid") #, 
@@ -56,13 +61,17 @@ grp_df$'age' <- as.numeric(grp_df$'age')
 
 ```
 
-## Data Scrubbing
+### Scrub Data
 ```{r, message=F, warning=F}
-# Replace sex and race numbers with strings
+# Remove subjs with tap_tot outlier scores
+grp_df <- grp_df[!(grp_df$tap_tot>125),]
+grp_df <- grp_df[!(grp_df$tap_tot<75),]
+
+new_df = subset(grp_df, select = c(BBLID, sex, dateDiff, Default, SomMot, avgCEST_Default, avgCEST_SomMot,tap_tot, hstatus,age))
 ```
 
-## QC Analyses
-```{r, message=F, warning=F}
+### QC Analyses
+```{r, message=F, warning=F, out.width= "50%"}
 # Histograms
 vars = c(CESTnetworks, CNB_scores, covariate_age)
 for (var in vars) {
@@ -72,14 +81,9 @@ for (var in vars) {
        xlab=paste(var))
 }
 ```
-
-## QC Demographic variables
-```{r, message=F, warning=F}
-# Bar graph comparing M and F SomMot and FC.
-```
-
-## Linear Models - CEST-age-tapping
-```{r, message=F, warning=F}
+ 
+### Linear Models - CEST-age-tapping
+```{r dodge-st, message=F, warning=F, out.width= "50%"}
 
 # Initialize an empty list to store ggplot objects
 gg_list <- list()
@@ -87,13 +91,14 @@ gg_list <- list()
 for (CESTnetwork in CESTnetworks) {
   graph_cols <- c(CESTnetwork, 'age', 'sex', 'tap_tot')
   graph_df <- grp_df[complete.cases(grp_df[, graph_cols]), ]
+  print(nrow(graph_df))
 
   # GluCEST vs Tapping Score 
-  formula_str <- paste("tap_tot ~", CESTnetwork, "+ age + sex")
+  formula_str <- paste("tap_tot ~", CESTnetwork, "+ age") # + sex
   m1 <- lm(formula_str, data = graph_df)
   print(summary(m1))
   r_squared <- summary(m1)$r.squared
-  p_value <- summary(m1)$coefficients[4, 4]
+  p_value <- summary(m1)$coefficients[2, 4]
   # Create plot
   gg <- ggplot(graph_df, 
                aes_string(x = CESTnetwork,
@@ -113,60 +118,18 @@ for (CESTnetwork in CESTnetworks) {
   gg_list[[CESTnetwork]] <- gg
 }
 
+#plot_grid(gg_list[["avgCEST_SomMot"]], gg_list[["avgCEST_Default"]])
+
+# Print or display ggplot objects
 # Print or display ggplot objects
 for (gg in gg_list) {
-  print(gg)
+  plot(gg)
 }
 
 ```
 
-## Linear Models - CEST-FC-age
-```{r, message=F, warning=F}
-
-# Initialize an empty list to store ggplot objects
-gg_list <- list()
-
-for (network in networks) {
-  CESTnetwork <- paste("avgCEST_", network, sep = "")
-  graph_cols <- c(network, CESTnetwork, 'age', 'sex')
-  graph_df <- grp_df[complete.cases(grp_df[, graph_cols]), ]
-
-  # GluCEST vs Tapping Score 
-  formula_str <- paste(CESTnetwork, " ~ age + sex +", network)
-  
-  m1 <- lm(formula_str, data = graph_df)
-  print(summary(m1))
-  r_squared <- summary(m1)$r.squared
-  p_value <- summary(m1)$coefficients[4, 4]
-  # Create plot
-  gg <- ggplot(graph_df, 
-               aes_string(x = network,
-                   y = CESTnetwork)) + #, color=hstatus
-    geom_point() + #aes(color=treatment)
-    geom_smooth(method = "lm",
-                formula = y ~ x,
-                se = FALSE) +
-    annotate("text", x = Inf, y = -Inf, hjust = 1, vjust = 0, 
-             label = paste("R-squared =", round(r_squared, 3), "\n", "p-value =", round(p_value, 3)), 
-             size = 4) +
-    ylab(CESTnetwork) +
-    xlab(paste(network, "FC")) +
-   # theme_pander() +
-    theme(legend.position="bottom") 
-  # Add ggplot object to the list
-  gg_list[[CESTnetwork]] <- gg
-}
-
-
-# Print or display ggplot objects
-for (gg in gg_list) {
-  print(gg)
-}
-
-```
-
-## Linear Models - CEST-FC-age-sex-datediff
-```{r, message=F, warning=F}
+### Linear Models - CEST-FC-age-sex-datediff
+```{r message=F, warning=F, out.width= "50%"}
 
 # Initialize an empty list to store ggplot objects
 gg_list <- list()
@@ -178,7 +141,7 @@ for (network in networks) {
   graph_df <- grp_df[complete.cases(grp_df[, graph_cols]), ]
 
   # GluCEST vs FC
-  formula_str <- paste(CESTnetwork, " ~ dateDiff + sex + age +", network) #
+  formula_str <- paste(CESTnetwork, " ~ dateDiff + age +", network) #sex +
   
   m1 <- lm(formula_str, data = graph_df)
   summary <- summary(m1)
@@ -205,9 +168,10 @@ for (network in networks) {
 }
 
 
+
 # Print or display ggplot objects
 for (gg in gg_list) {
-  print(gg)
+  plot(gg)
 }
 
 for (summary in sum_list) {
@@ -216,34 +180,5 @@ for (summary in sum_list) {
 
 ```
 
-
-
-
-## Compare Network CEST
-```{r, message=F, warning=F}
-# Make a bar graph with all avg CEST values for each network
-# Run t test comparing all networks' CEST
-
-# Calculate the average of each network column
-cestavgs <- grp_df[, CESTnetworks]
-averages <- colMeans(cestavgs, na.rm = TRUE)
-sds <- apply(cestavgs, 2, sd, na.rm = TRUE)
-
-# Create a bar graph of the averages
-barplot(averages, main="Average Network Values", xlab="Network", ylab="Average Value",
-        names.arg=CESTnetworks, ylim = c(0,16))
-
-# Run pairwise t-tests on each pair of network columns
-pairwise_ttests <- lapply(columns_to_test, function(col) {
-  pairwise.t.test(df[[col]], df$grouping_variable, p.adjust.method = "none")
-})
-
-pairwise_ttests <- pairwise.t.test(df[, CESTnetworks], p.adjust.method = "none")
-
-# Print the results of the pairwise t-tests
-print(pairwise_ttests)
-
-
-```
 
 
