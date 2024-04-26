@@ -38,7 +38,8 @@ setwd("/Users/pecsok/projects/GluCEST-fMRI/glucest-rsfmri/")
 # Set fieldstrength and read in group data:
 fieldstrength= "3T"
 grp_df <- read_grp_data(fieldstrength,'grp_df_') 
-diag_df = read_grp_data(fieldstrength,'diag_df_')
+#diag_df = read_grp_data(fieldstrength,'diag_df_')
+#view(grp_df)
 ```
 
 ### Set Variables & Choose What to Analyse
@@ -58,16 +59,26 @@ covariate_sex = 'sex'
 covariate_ct = 'count'
 
 grp_df$'age' <- as.numeric(grp_df$'age')
+grp_df$'avgCEST_SomMot' <- as.numeric(grp_df$'avgCEST_SomMot')
+grp_df$'SomMot' <- as.numeric(grp_df$'SomMot')
+grp_df$'age' <- as.numeric(grp_df$'age')
+grp_df$'dateDiff' <- as.numeric(grp_df$'dateDiff')
 
+grp_df$'sex'[grp_df$'sex'=="1"] <- "M"
+grp_df$'sex'[grp_df$'sex'=="2"] <- "F"
+grp_df$'diag_group'[grp_df$'hstatus'=="NC"] <- "HC"
+grp_df$'diag_group'[grp_df$'hstatus'!="NC"] <- "PSY"
 ```
 
 ### Scrub Data
 ```{r, message=F, warning=F}
-# Remove subjs with tap_tot outlier scores
-grp_df <- grp_df[!(grp_df$tap_tot>125),]
-grp_df <- grp_df[!(grp_df$tap_tot<75),]
+# Remove subjs with outlier scores
+grp_df <- grp_df[!(grp_df$BBLID=="20871"),] # SomMot FC < 0.2
+grp_df <- grp_df[!(grp_df$BBLID=="80557"),] # tap_tot<75
+grp_df <- grp_df[!(grp_df$BBLID=="94703"),] # tap_tot>125
+grp_df <- grp_df[!(grp_df$BBLID=="127935"),] # tap_tot>125
 
-new_df = subset(grp_df, select = c(BBLID, sex, dateDiff, Default, SomMot, avgCEST_Default, avgCEST_SomMot,tap_tot, hstatus,age))
+print(nrow(grp_df))
 ```
 
 ### QC Analyses
@@ -84,7 +95,6 @@ for (var in vars) {
  
 ### Linear Models - CEST-age-tapping
 ```{r dodge-st, message=F, warning=F, out.width= "50%"}
-
 # Initialize an empty list to store ggplot objects
 gg_list <- list()
 
@@ -102,7 +112,7 @@ for (CESTnetwork in CESTnetworks) {
   # Create plot
   gg <- ggplot(graph_df, 
                aes_string(x = CESTnetwork,
-                   y = "tap_tot")) + #, color=hstatus
+                   y = "tap_tot")) + #, color="hstatus"
     geom_point() + #aes(color=treatment)
     geom_smooth(method = "lm",
                 formula = y ~ x,
@@ -128,18 +138,127 @@ for (gg in gg_list) {
 
 ```
 
+
+### Linear Models - CEST-age-tapping by diagnosis
+```{r dodge-st, message=F, warning=F, out.width= "50%"}
+# Initialize an empty list to store ggplot objects
+gg_list <- list()
+
+for (CESTnetwork in CESTnetworks) {
+  graph_cols <- c(CESTnetwork, 'age', 'sex', 'tap_tot')
+  graph_df <- grp_df[complete.cases(grp_df[, graph_cols]), ]
+  print(nrow(graph_df))
+
+  # GluCEST vs Tapping Score 
+  formula_str <- paste("tap_tot ~", CESTnetwork, "+ age") # + sex
+  m1 <- lm(formula_str, data = graph_df)
+  print(summary(m1))
+  r_squared <- summary(m1)$r.squared
+  p_value <- summary(m1)$coefficients[2, 4]
+  
+  m1_psy <- lm(formula_str, data = graph_df[graph_df$diag_group=='PSY',])
+  summary_psy <- summary(m1_psy)
+  r_squared_psy <- summary(m1_psy)$r.squared
+  p_value_psy <- summary(m1_psy)$coefficients[2, 4]
+  print(summary_psy)
+  
+  m1_hc <- lm(formula_str, data = graph_df[graph_df$diag_group=='HC',])
+  summary_hc <- summary(m1_hc)
+  r_squared_hc <- summary(m1_hc)$r.squared
+  p_value_hc <- summary(m1_hc)$coefficients[2, 4]
+  print(summary_hc)
+  
+    # Create plot
+  gg <- ggplot(graph_df, 
+               aes_string(x = CESTnetwork,
+                   y = "tap_tot",color="diag_group")) + #, 
+    geom_point() + #aes(color=treatment)
+    geom_smooth(method = "lm",
+                formula = y ~ x,
+                se = FALSE) +
+    annotate("text", x = Inf, y = -Inf, hjust = 1, vjust = 0, 
+             label = paste("R-squared =", round(r_squared, 3), "\n", "p-value =", round(p_value, 3)), 
+             size = 4) +
+    ylab("Tapping Score") +
+    xlab(paste(CESTnetwork, "GluCEST")) +
+   # theme_pander() +
+    theme(legend.position="bottom") 
+  # Add ggplot object to the list
+  gg_list[[CESTnetwork]] <- gg
+}
+
+for (gg in gg_list) {
+  plot(gg)
+}
+```
+
+
+### Linear Models - FC-age-tapping by diagnosis
+```{r dodge-st, message=F, warning=F, out.width= "50%"}
+# Initialize an empty list to store ggplot objects
+gg_list <- list()
+
+for (network in networks) {
+  graph_cols <- c(network, 'age', 'sex', 'tap_tot')
+  graph_df <- grp_df[complete.cases(grp_df[, graph_cols]), ]
+  print(nrow(graph_df))
+
+  # GluCEST vs Tapping Score 
+  formula_str <- paste("tap_tot ~", network, "+ age") # + sex
+  m1 <- lm(formula_str, data = graph_df)
+  print(summary(m1))
+  r_squared <- summary(m1)$r.squared
+  p_value <- summary(m1)$coefficients[2, 4]
+  
+  m1_psy <- lm(formula_str, data = graph_df[graph_df$diag_group=='PSY',])
+  summary_psy <- summary(m1_psy)
+  r_squared_psy <- summary(m1_psy)$r.squared
+  p_value_psy <- summary(m1_psy)$coefficients[2, 4]
+  print(summary_psy)
+  
+  m1_hc <- lm(formula_str, data = graph_df[graph_df$diag_group=='HC',])
+  summary_hc <- summary(m1_hc)
+  r_squared_hc <- summary(m1_hc)$r.squared
+  p_value_hc <- summary(m1_hc)$coefficients[2, 4]
+  print(summary_hc)
+  
+    # Create plot
+  gg <- ggplot(graph_df, 
+               aes_string(x = network,
+                   y = "tap_tot",color="diag_group")) + #, 
+    geom_point() + #aes(color=treatment)
+    geom_smooth(method = "lm",
+                formula = y ~ x,
+                se = FALSE) +
+    annotate("text", x = Inf, y = -Inf, hjust = 1, vjust = 0, 
+             label = paste("R-squared =", round(r_squared, 3), "\n", "p-value =", round(p_value, 3)), 
+             size = 4) +
+    ylab("Tapping Score") +
+    xlab(paste(network, "FC")) +
+   # theme_pander() +
+    theme(legend.position="bottom") 
+  # Add ggplot object to the list
+  gg_list[[network]] <- gg
+}
+
+for (gg in gg_list) {
+  plot(gg)
+}
+```
+
 ### Linear Models - CEST-FC-age-sex-datediff
 ```{r message=F, warning=F, out.width= "50%"}
 
 # Initialize an empty list to store ggplot objects
 gg_list <- list()
 sum_list <- list()
-
+#print(grp_df)
 for (network in networks) {
+  network='SomMot'
   CESTnetwork <- paste("avgCEST_", network, sep = "")
-  graph_cols <- c(network, CESTnetwork, 'age', 'sex','dateDiff')
+  graph_cols <- c(network, CESTnetwork, 'age', 'dateDiff')
   graph_df <- grp_df[complete.cases(grp_df[, graph_cols]), ]
-
+  graph_df <- grp_df
   # GluCEST vs FC
   formula_str <- paste(CESTnetwork, " ~ dateDiff + age +", network) #sex +
   
@@ -167,13 +286,97 @@ for (network in networks) {
   sum_list[[CESTnetwork]] <- summary
 }
 
+# Print or display ggplot objects
+for (gg in gg_list) {
+  plot(gg)
+}
+for (summary in sum_list) {
+  print(summary)
+}
 
+```
+
+
+```{r message=F, warning=F, out.width= "50%"}
+for (network in networks) {
+  CESTnetwork <- paste("avgCEST_", network, sep = "")
+  graph_cols <- c(network, CESTnetwork, 'age', 'dateDiff')
+  graph_df <- grp_df[complete.cases(grp_df[, graph_cols]), ]
+  graph_df <- grp_df
+  # GluCEST vs FC
+  formula_str <- paste(CESTnetwork, " ~ dateDiff + age +", network) #sex +
+  m1 <- lm(formula_str, data = graph_df)
+  fitted_models <- graph_df %>% group_by(diag_group) %>% do(model = lm(formula_str, data = graph_df))
+  fitted_models$summary
+  
+}
+  
+  
+```
+
+### Linear Models - CEST-FC-age-sex-datediff by diagnosis
+```{r message=F, warning=F, out.width= "50%"}
+
+# Initialize an empty list to store ggplot objects
+gg_list <- list()
+sum_list <- list()
+#print(grp_df)
+for (network in networks) {
+  CESTnetwork <- paste("avgCEST_", network, sep = "")
+  graph_cols <- c(network, CESTnetwork, 'age', 'dateDiff')
+  graph_df <- grp_df[complete.cases(grp_df[, graph_cols]), ]
+  graph_df <- grp_df
+  #view(graph_df)
+  print(nrow(grp_df))
+  print(nrow(graph_df))
+    # GluCEST vs FC
+  formula_str <- paste(CESTnetwork, " ~ dateDiff + age +", network) #sex +
+  
+  m1 <- lm(formula_str, data = graph_df)
+  summary <- summary(m1)
+  r_squared <- summary(m1)$r.squared
+  p_value <- summary(m1)$coefficients[4, 4]
+  
+  m1_psy <- lm(formula_str, data = graph_df[graph_df$diag_group=='PSY',])
+  summary_psy <- summary(m1_psy)
+  r_squared_psy <- summary(m1_psy)$r.squared
+  p_value_psy <- summary(m1_psy)$coefficients[4, 4]
+  
+  m1_hc <- lm(formula_str, data = graph_df[graph_df$diag_group=='HC',])
+  summary_hc <- summary(m1_hc)
+  r_squared_hc <- summary(m1_hc)$r.squared
+  p_value_hc <- summary(m1_hc)$coefficients[4, 4]
+  
+  #print("Summary for Psychosis and " + network)
+  print(summary_psy)
+  #print("Summary for Healthy and ", network)
+  print(summary_hc)
+}
+```
+  # Create plot
+  gg <- ggplot(graph_df, 
+               aes_string(x = network,
+                   y = CESTnetwork,color='diag_group')) + #, 
+    geom_point() + #aes(color=treatment)
+    geom_smooth(method = "lm",
+                formula = y ~ x,
+                se = FALSE) +
+    annotate("text", x = Inf, y = -Inf, hjust = 1, vjust = 0, 
+             label = paste("R-squared =", round(r_squared, 3), "\n", "p-value =", round(p_value, 3)), 
+             size = 4) +
+    ylab(CESTnetwork) +
+    xlab(paste(network, "FC")) +
+   # theme_pander() +
+    theme(legend.position="bottom") 
+  # Add ggplot object to the list
+  gg_list[[CESTnetwork]] <- gg
+  sum_list[[CESTnetwork]] <- c(summary_psy, summary_hc)
+}
 
 # Print or display ggplot objects
 for (gg in gg_list) {
   plot(gg)
 }
-
 for (summary in sum_list) {
   print(summary)
 }
