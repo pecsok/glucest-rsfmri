@@ -21,7 +21,7 @@ library(tidyverse)
 library(ggplot2)
 library(ggpmisc)
 library(cowplot)
-
+library(pls)
 source("~/projects/GluCEST-fMRI/glucest-rsfmri/read_grp_data.R")
 #source("/cbica/projects/thalamocortical_development/software/rotate_parcellation/R/perm.sphere.p.R") This package is used for parcel-based spin testing.
 
@@ -44,8 +44,9 @@ grp_df <- read_grp_data(fieldstrength,'grp_df_')
 
 ### Set Variables & Choose What to Analyse
 ```{r, message=F, warning=F}
-networks = c("SomMot","Default") #, 
-CESTnetworks = c("avgCEST_SomMot","avgCEST_Default") #  "ctCEST_Cont", "ctCEST_Default",, "ctCEST_Limbic",  ,"ctCEST_SalVentAttn"
+networks = c("SomMot","Default","Limbic") #, 
+networks_all = c("SomMot_all","Default_all","Limbic_all") #, 
+CESTnetworks = c("avgCEST_SomMot","avgCEST_Default", "avgCEST_Limbic") #  "ctCEST_Cont", "ctCEST_Default",, "ctCEST_Limbic",  ,"ctCEST_SalVentAttn"
 CESTcts = c("ctCEST_SomMot","ctCEST_Default")
 
 CNB_scores = c("tap_tot")
@@ -60,36 +61,61 @@ covariate_ct = 'count'
 
 grp_df$'age' <- as.numeric(grp_df$'age')
 grp_df$'avgCEST_SomMot' <- as.numeric(grp_df$'avgCEST_SomMot')
+grp_df$'avgCEST_Default' <- as.numeric(grp_df$'avgCEST_Default')
+grp_df$'avgCEST_Limbic' <- as.numeric(grp_df$'avgCEST_Limbic')
 grp_df$'SomMot' <- as.numeric(grp_df$'SomMot')
 grp_df$'age' <- as.numeric(grp_df$'age')
 grp_df$'dateDiff' <- as.numeric(grp_df$'dateDiff')
 
 grp_df$'sex'[grp_df$'sex'=="1"] <- "M"
 grp_df$'sex'[grp_df$'sex'=="2"] <- "F"
+
+
+grp_df$'cest_fc' <- grp_df$'avgCEST_SomMot' / grp_df$'SomMot'
+
+
 grp_df$'diag_group'[grp_df$'hstatus'=="NC"] <- "HC"
+
+#grp_df <- grp_df[grp_df$'hstatus'!="MDD",]
+#grp_df <- grp_df[grp_df$'hstatus'!="O",]
+#grp_df <- grp_df[grp_df$'hstatus'!="Unknown",]
+
 grp_df$'diag_group'[grp_df$'hstatus'!="NC"] <- "PSY"
+
+
+
 ```
 
 ### Scrub Data
 ```{r, message=F, warning=F}
 # Remove subjs with outlier scores
 grp_df <- grp_df[!(grp_df$BBLID=="20871"),] # SomMot FC < 0.2
+#grp_df <- grp_df[!(grp_df$cest_fc>21),] # SomMot FC < 0.2
+
 grp_df <- grp_df[!(grp_df$BBLID=="80557"),] # tap_tot<75
 grp_df <- grp_df[!(grp_df$BBLID=="94703"),] # tap_tot>125
 grp_df <- grp_df[!(grp_df$BBLID=="127935"),] # tap_tot>125
 
 print(nrow(grp_df))
+
+# Save_df
+write.csv(grp_df, "grp_df_r.csv", row.names = FALSE)
 ```
 
 ### QC Analyses
 ```{r, message=F, warning=F, out.width= "50%"}
 # Histograms
-vars = c(CESTnetworks, CNB_scores, covariate_age)
+vars = c(CESTnetworks, CNB_scores, covariate_age,'cest_fc')
 for (var in vars) {
   print(var)
   hist(grp_df[[var]],
        main=paste("Histogram of", var,sep=" "),
        xlab=paste(var))
+  
+  f.den.group <-ggplot(grp_df, aes(grp_df$'cest_fc', fill=grp_df$'diag_group', color=grp_df$'diag_group')) +
+  geom_density(alpha=0.6)+
+  theme(legend.position = "none")
+  plot(f.den.group)
 }
 ```
  
@@ -156,6 +182,7 @@ for (CESTnetwork in CESTnetworks) {
   r_squared <- summary(m1)$r.squared
   p_value <- summary(m1)$coefficients[2, 4]
   
+  
   m1_psy <- lm(formula_str, data = graph_df[graph_df$diag_group=='PSY',])
   summary_psy <- summary(m1_psy)
   r_squared_psy <- summary(m1_psy)$r.squared
@@ -192,6 +219,62 @@ for (gg in gg_list) {
 }
 ```
 
+### Linear Models - CEST-FC-age-tapping by diagnosis
+```{r dodge-st, message=F, warning=F, out.width= "50%"}
+# Initialize an empty list to store ggplot objects
+gg_list <- list()
+for (i in 1:length(CESTnetworks)) {
+  CESTnetwork = CESTnetworks[[i]]
+  network = networks[[i]]
+  graph_cols <- c(CESTnetwork, network, 'age', 'sex', 'tap_tot')
+  graph_df <- grp_df[complete.cases(grp_df[, graph_cols]), ]
+  #graph_df <- graph_df[graph_df$diag_group=="PSY", ]
+  print(nrow(graph_df))
+
+  # GluCEST vs Tapping Score 
+  formula_str <- paste("tap_tot ~ ", network, " + ",CESTnetwork, "+ age")
+  m1 <- lm(formula_str, data = graph_df)
+  print(summary(m1))
+  r_squared <- summary(m1)$r.squared
+  p_value <- summary(m1)$coefficients[2, 4]
+  
+  m1_psy <- lm(formula_str, data = graph_df[graph_df$diag_group=='PSY',])
+  summary_psy <- summary(m1_psy)
+  r_squared_psy <- summary(m1_psy)$r.squared
+  p_value_psy <- summary(m1_psy)$coefficients[2, 4]
+  print("PSY")
+  print(summary_psy)
+  
+  m1_hc <- lm(formula_str, data = graph_df[graph_df$diag_group=='HC',])
+  summary_hc <- summary(m1_hc)
+  r_squared_hc <- summary(m1_hc)$r.squared
+  p_value_hc <- summary(m1_hc)$coefficients[2, 4]
+  print("HC")
+  print(summary_hc)
+  
+    # Create plot
+  gg <- ggplot(graph_df, 
+               aes_string(x = CESTnetwork,
+                   y = "tap_tot")) + #, ,color="diag_group"
+    geom_point() + #aes(color=treatment)
+    geom_smooth(method = "lm",
+                formula = y ~ x,
+                se = FALSE) +
+    annotate("text", x = Inf, y = -Inf, hjust = 1, vjust = 0, 
+             label = paste("R-squared =", round(r_squared, 3), "\n", "p-value =", round(p_value, 3)), 
+             size = 4) +
+    ylab("Tapping Score") +
+    xlab(paste(CESTnetwork, "GluCEST")) +
+   # theme_pander() +
+    theme(legend.position="bottom") 
+  # Add ggplot object to the list
+  gg_list[[CESTnetwork]] <- gg
+}
+
+for (gg in gg_list) {
+  plot(gg)
+}
+```
 
 ### Linear Models - FC-age-tapping by diagnosis
 ```{r dodge-st, message=F, warning=F, out.width= "50%"}
@@ -254,11 +337,12 @@ gg_list <- list()
 sum_list <- list()
 #print(grp_df)
 for (network in networks) {
-  network='SomMot'
+  network = "SomMot"
+  #network='SomMot_all'
   CESTnetwork <- paste("avgCEST_", network, sep = "")
   graph_cols <- c(network, CESTnetwork, 'age', 'dateDiff')
   graph_df <- grp_df[complete.cases(grp_df[, graph_cols]), ]
-  graph_df <- grp_df
+  #graph_df <- graph_df[graph_df$diag_group == "PSY",]
   # GluCEST vs FC
   formula_str <- paste(CESTnetwork, " ~ dateDiff + age +", network) #sex +
   
@@ -269,18 +353,21 @@ for (network in networks) {
   # Create plot
   gg <- ggplot(graph_df, 
                aes_string(x = network,
-                   y = CESTnetwork)) + #, color=hstatus
-    geom_point() + #aes(color=treatment)
+                   y = CESTnetwork)) + #
+    geom_point(size=2.75) + #aes(color="purple"
     geom_smooth(method = "lm",
                 formula = y ~ x,
-                se = FALSE) +
+                se = FALSE, color="black") +
+    scale_color_brewer(palette = "PuOr") +
     annotate("text", x = Inf, y = -Inf, hjust = 1, vjust = 0, 
              label = paste("R-squared =", round(r_squared, 3), "\n", "p-value =", round(p_value, 3)), 
              size = 4) +
     ylab(CESTnetwork) +
     xlab(paste(network, "FC")) +
    # theme_pander() +
-    theme(legend.position="bottom") 
+    theme(legend.position="bottom", 
+          axis.title.x = element_text(size = 20),
+          axis.title.y = element_text(size = 20)) 
   # Add ggplot object to the list
   gg_list[[CESTnetwork]] <- gg
   sum_list[[CESTnetwork]] <- summary
@@ -288,8 +375,12 @@ for (network in networks) {
 
 # Print or display ggplot objects
 for (gg in gg_list) {
+  ggsave("/Users/pecsok/projects/GluCEST-fMRI/glucest-rsfmri/motor_glu_pipeline/SomMot_glu-fc.png",
+      dpi = 300, width = 12,   height = 7, units = "in")
   plot(gg)
+  dev.off()
 }
+
 for (summary in sum_list) {
   print(summary)
 }
@@ -322,10 +413,13 @@ gg_list <- list()
 sum_list <- list()
 #print(grp_df)
 for (network in networks) {
+  network="SomMot"
   CESTnetwork <- paste("avgCEST_", network, sep = "")
+  #network <- paste(network, "_btwn", sep = "")
   graph_cols <- c(network, CESTnetwork, 'age', 'dateDiff')
   graph_df <- grp_df[complete.cases(grp_df[, graph_cols]), ]
-  graph_df <- grp_df
+  #graph_df <- graph_df[graph_df$diag_group != "HC", ]
+  #graph_df <- grp_df
   #view(graph_df)
   print(nrow(grp_df))
   print(nrow(graph_df))
@@ -347,41 +441,159 @@ for (network in networks) {
   r_squared_hc <- summary(m1_hc)$r.squared
   p_value_hc <- summary(m1_hc)$coefficients[4, 4]
   
+  # Plot
+  gg <- ggplot(graph_df, 
+             aes_string(x = network,
+                 y = CESTnetwork, color='diag_group')) + #
+  geom_point(size=2.75) + #aes(color=treatment)
+  geom_smooth(method = "lm",
+              formula = y ~ x,
+              se = FALSE) +
+  annotate("text", x = Inf, y = -Inf, hjust = 1, vjust = 0, 
+           label = paste("R-squared =", round(r_squared, 2), "\n", "p-value =", round(p_value, 2)), 
+           size = 4) +
+  ylab(CESTnetwork) +
+  xlab(paste(network, "FC")) +
+  theme(legend.position="bottom", 
+        axis.title.x = element_text(size = 20),
+        axis.title.y = element_text(size = 20)) 
+# Add ggplot object to the list
+gg_list[[CESTnetwork]] <- gg
+sum_list[[CESTnetwork]] <- summary
+
+
+# Print or display ggplot objects
+for (gg in gg_list) {
+  plot(gg)
+  ggsave("/Users/pecsok/projects/GluCEST-fMRI/glucest-rsfmri/motor_glu_pipeline/SomMot_glu-fc_diag.png",
+      dpi = 300, width = 12,   height = 7, units = "in")
+  plot(gg)
+  dev.off()
+}
+for (summary in sum_list) {
+  print(summary)
+}
+
+  
   #print("Summary for Psychosis and " + network)
   print(summary_psy)
   #print("Summary for Healthy and ", network)
   print(summary_hc)
 }
 ```
-  # Create plot
-  gg <- ggplot(graph_df, 
-               aes_string(x = network,
-                   y = CESTnetwork,color='diag_group')) + #, 
-    geom_point() + #aes(color=treatment)
-    geom_smooth(method = "lm",
-                formula = y ~ x,
-                se = FALSE) +
-    annotate("text", x = Inf, y = -Inf, hjust = 1, vjust = 0, 
-             label = paste("R-squared =", round(r_squared, 3), "\n", "p-value =", round(p_value, 3)), 
-             size = 4) +
-    ylab(CESTnetwork) +
-    xlab(paste(network, "FC")) +
-   # theme_pander() +
-    theme(legend.position="bottom") 
-  # Add ggplot object to the list
-  gg_list[[CESTnetwork]] <- gg
-  sum_list[[CESTnetwork]] <- c(summary_psy, summary_hc)
-}
+ 
+ 
+ ### Linear Models - CEST-FCratio-age-sex-datediff by diagnosis
+```{r message=F, warning=F, out.width= "50%"}
+
+# Initialize an empty list to store ggplot objects
+gg_list <- list()
+sum_list <- list()
+#print(grp_df)
+
+  CESTnetwork <- paste("avgCEST_", network, sep = "")
+  graph_cols <- c('cest_fc', 'age', 'dateDiff')
+  graph_df <- grp_df[complete.cases(grp_df[, graph_cols]), ]
+  graph_df <- graph_df[!(grp_df$BBLID=="80557"),] # tap_tot<75
+  graph_df <- graph_df[!(grp_df$BBLID=="94703"),] # tap_tot>125
+  graph_df <- graph_df[!(grp_df$BBLID=="127935"),] # tap_tot>125
+  print(nrow(grp_df))
+  print(nrow(graph_df))
+    # GluCEST vs FC
+  formula_str <- paste("tap_tot ~ dateDiff + age + cest_fc * diag_group") #sex +
+  
+  m1 <- lm(formula_str, data = graph_df)
+  summary <- summary(m1)
+  r_squared <- summary(m1)$r.squared
+  p_value <- summary(m1)$coefficients[4, 4]
+  print(summary)
+  
+  # Plot
+  gg <- ggplot(graph_df,
+             aes_string(x = 'cest_fc',
+                 y = 'tap_tot', color='diag_group')) + #
+  geom_point(size=2.75, shape=15) + #aes(color=treatment)
+  geom_smooth(method = "lm",
+              formula = y ~ x,
+              se = FALSE) +
+  annotate("text", x = Inf, y = -Inf, hjust = 1, vjust = 0, 
+           label = paste("R-squared =", round(r_squared, 3), "\n", "p-value =", round(p_value, 3)), 
+           size = 4) +
+  ylab("Tapping Score") +
+  xlab(paste("GluCEST-FC Ratio")) +
+  theme(legend.position="bottom", 
+        axis.title.x = element_text(size = 20),
+        axis.title.y = element_text(size = 20)) 
+# Add ggplot object to the list
+gg_list[[CESTnetwork]] <- gg
+sum_list[[CESTnetwork]] <- summary
+
 
 # Print or display ggplot objects
 for (gg in gg_list) {
   plot(gg)
-}
-for (summary in sum_list) {
-  print(summary)
+  ggsave("/Users/pecsok/projects/GluCEST-fMRI/glucest-rsfmri/motor_glu_pipeline/Tapping_SomMot_glu-fc_diag.png",
+      dpi = 300, width = 12,   height = 7, units = "in")
+
 }
 
 ```
+ 
+ 
+ ### Partial Least Squares Regression
+```{r message=F, warning=F, out.width= "50%"}
 
+# Initialize an empty list to store ggplot objects
+gg_list <- list()
+sum_list <- list()
+#print(grp_df)
+for (network in networks) {
+  CESTnetwork <- paste("avgCEST_", network, sep = "")
+  graph_cols <- c(network, CESTnetwork, 'age', 'dateDiff')
+  graph_df <- grp_df[complete.cases(grp_df[, graph_cols]), ]
+  #graph_df <- grp_df
+  #view(graph_df)
+  print(nrow(grp_df))
+  print(nrow(graph_df))
+    # GluCEST vs FC
+  formula_str <- paste("tap_tot ~ dateDiff + age +", CESTnetwork, "+", network) #sex +
+  print(formula_str)
+  psl_reg <- plsr(tap_tot ~ dateDiff + age + avgCEST_SomMot + SomMot, ncomp = 3, data = graph_df, validation = "LOO")
+  print(summary(psl_reg))
+}
+```
+ 
+  # Create heatmap
+```{r message=F, warning=F, out.width= "50%"}
+fcmat <- read.csv('/Users/pecsok/projects/GluCEST-fMRI/glucest-rsfmri/motor_glu_pipeline/fcmat117847.csv', row.names = 1)
 
+diag(fcmat) <- 1
+rownames(fcmat) <- 1:nrow(fcmat)  # Set row names to numbers
+colnames(fcmat) <- 1:ncol(fcmat) 
 
+## convert to tibble, add row identifier, and shape "long"
+dat2 <-
+  fcmat %>%
+  as_tibble() %>%
+  rownames_to_column("Var1") %>%
+  pivot_longer(-Var1, names_to = "Var2", values_to = "value") %>%
+  mutate(
+    Var1 = factor(Var1, levels = 1:100),
+    Var2 = factor(gsub("V", "", Var2), levels = 1:100)
+  )
+#> Warning: The `x` argument of `as_tibble.matrix()` must have unique column names if
+#> `.name_repair` is omitted as of tibble 2.0.0.
+#> ℹ Using compatibility `.name_repair`.
+
+ggplot(dat2, aes(Var1, Var2)) +
+  geom_tile(aes(fill = value)) +
+  #geom_text(aes(label = round(value, 1))) +
+  scale_fill_gradient(low = "white", high = "red")
+```
+  
+  
+  
+  
+  
+  
+  
