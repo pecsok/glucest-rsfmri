@@ -2,8 +2,7 @@
 
 #export SINGULARITYENV_FS_LICENSE=/mnt/images/license.txt
 
-#subjs="114738 83068"
-subjs="22744"
+subjs="100522 112126 118864"
 
 for subject in ${subjs}
 do
@@ -13,15 +12,17 @@ project=/project/bbl_roalf_pecsokphd/projects/glucest-rsfmri
 SIF=${project}/images/fmriprep_21.0.1.sif
 
 echo $SIF
-singularity run --cleanenv \
+singularity run --cleanenv \  
         -B ${project} \
-        -env SURFER_FRONTDOOR=1
         ${SIF} \
-        /project/bbl_roalf_pecsokphd/projects/glucest-rsfmri/data/fmri/fw_data/3T/3T_${subject} /project/bbl_roalf_pecsokphd/projects/glucest-rsfmri/data/fmri/sandbox/preprocessed/3T participant \
+        /project/bbl_roalf_pecsokphd/projects/glucest-rsfmri/data/fmri/fw_data/3T/3T_${subject} /project/bbl_roalf_pecsokphd/projects/glucest-rsfmri/data/fmri/preprocessed/cifti/3T participant \
+        --env SURFER_SIDEDOOR=1 \
         --participant-label sub-${subject} \
+        --env FS_LICENSE=/project/bbl_roalf_pecsokphd/projects/glucest-rsfmri/images/license.txt \
         --fs-license-file /project/bbl_roalf_pecsokphd/projects/glucest-rsfmri/images/license.txt \
         --work-dir /project/bbl_roalf_pecsokphd/projects/glucest-rsfmri/tmp \
         --stop-on-first-crash \
-        --cifti-output \
+	#--fs-no-reconall \
+	--cifti-output \
 
 done
