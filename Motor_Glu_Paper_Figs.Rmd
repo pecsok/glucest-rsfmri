@@ -337,8 +337,6 @@ gg_list <- list()
 sum_list <- list()
 #print(grp_df)
 for (network in networks) {
-  network = "SomMot"
-  #network='SomMot_all'
   CESTnetwork <- paste("avgCEST_", network, sep = "")
   graph_cols <- c(network, CESTnetwork, 'age', 'dateDiff')
   graph_df <- grp_df[complete.cases(grp_df[, graph_cols]), ]
@@ -461,7 +459,7 @@ for (network in networks) {
 gg_list[[CESTnetwork]] <- gg
 sum_list[[CESTnetwork]] <- summary
 
-
+plot(gg)
 # Print or display ggplot objects
 for (gg in gg_list) {
   plot(gg)
@@ -482,6 +480,78 @@ for (summary in sum_list) {
 }
 ```
  
+### Linear Models - CEST-FC-age-sex-datediff by diagnosis
+```{r message=F, warning=F, out.width= "50%"}
+
+
+# Initialize an empty list to store ggplot objects
+gg_list <- list()
+sum_list <- list()
+#print(grp_df)
+for (network in networks) {
+  network="SomMot"
+  CESTnetwork <- paste("avgCEST_", network, sep = "")
+  #network <- paste(network, "_btwn", sep = "")
+  graph_cols <- c(network, CESTnetwork, 'age', 'dateDiff')
+  graph_df <- grp_df[complete.cases(grp_df[, graph_cols]), ]
+  
+  # Exclude tapping outliers if not already done:
+  graph_df <- graph_df[!(graph_df$BBLID=="80557"),] # tap_tot<75
+  graph_df <- graph_df[!(graph_df$BBLID=="94703"),] # tap_tot>125
+  graph_df <- graph_df[!(graph_df$BBLID=="127935"),] # tap_tot>125
+
+  graph_df$'cest_fc' <- graph_df$avgCEST_SomMot/graph_df$SomMot
+  graph_df$'cest_fc' <- scale(graph_df$'cest_fc')
+  print(nrow(grp_df))
+  print(nrow(graph_df))
+
+  
+   # GluCEST vs FC
+  formula_str <- paste("tap_tot ~ dateDiff + age + cest_fc * diag_group") #sex +
+  
+  m1 <- lm(formula_str, data = graph_df)
+  summary <- summary(m1)
+  r_squared <- summary(m1)$r.squared
+  p_value <- summary(m1)$coefficients[4, 4]
+  print(summary)
+  
+  # Plot
+  gg <- ggplot(graph_df,
+             aes_string(x = 'cest_fc',
+                 y = 'tap_tot', color='diag_group')) + #
+  geom_point(size=2.75, shape=15) + #aes(color=treatment)
+  geom_smooth(method = "lm",
+              formula = y~x,
+              se = FALSE) +
+  annotate("text", x = Inf, y = -Inf, hjust = 1, vjust = 0, 
+           label = paste("R-squared =", round(r_squared, 3), "\n", "p-value =", round(p_value, 3)), 
+           size = 4) +
+  ylab("Tapping Score") +
+  xlab(paste("GluCEST-FC Ratio")) +
+  theme(legend.position="bottom", 
+        axis.title.x = element_text(size = 20),
+        axis.title.y = element_text(size = 20)) 
+# Add ggplot object to the list
+gg_list[[CESTnetwork]] <- gg
+sum_list[[CESTnetwork]] <- summary
+
+plot(gg)
+
+# Print or display ggplot objects
+for (gg in gg_list) {
+  plot(gg)
+  ggsave("/Users/pecsok/projects/GluCEST-fMRI/glucest-rsfmri/motor_glu_pipeline/Tapping_SomMot_glu-fc_diag.png",
+      dpi = 300, width = 12,   height = 7, units = "in")
+
+}
+  
+  #print("Summary for Psychosis and " + network)
+  print(summary_psy)
+  #print("Summary for Healthy and ", network)
+  print(summary_hc)
+}
+```
+ 
  
  ### Linear Models - CEST-FCratio-age-sex-datediff by diagnosis
 ```{r message=F, warning=F, out.width= "50%"}
@@ -494,9 +564,11 @@ sum_list <- list()
   CESTnetwork <- paste("avgCEST_", network, sep = "")
   graph_cols <- c('cest_fc', 'age', 'dateDiff')
   graph_df <- grp_df[complete.cases(grp_df[, graph_cols]), ]
-  graph_df <- graph_df[!(grp_df$BBLID=="80557"),] # tap_tot<75
+  graph_df <- graph_df[!(grp_df$'BBLID'=="80557"),] # tap_tot<75
   graph_df <- graph_df[!(grp_df$BBLID=="94703"),] # tap_tot>125
   graph_df <- graph_df[!(grp_df$BBLID=="127935"),] # tap_tot>125
+  graph_df <- graph_df[!(grp_df$BBLID=="119791"),] # tap_tot>125
+  
   print(nrow(grp_df))
   print(nrow(graph_df))
     # GluCEST vs FC
@@ -514,7 +586,7 @@ sum_list <- list()
                  y = 'tap_tot', color='diag_group')) + #
   geom_point(size=2.75, shape=15) + #aes(color=treatment)
   geom_smooth(method = "lm",
-              formula = y ~ x,
+              formula = y~x,
               se = FALSE) +
   annotate("text", x = Inf, y = -Inf, hjust = 1, vjust = 0, 
            label = paste("R-squared =", round(r_squared, 3), "\n", "p-value =", round(p_value, 3)), 
@@ -528,7 +600,7 @@ sum_list <- list()
 gg_list[[CESTnetwork]] <- gg
 sum_list[[CESTnetwork]] <- summary
 
-
+plot(gg)
 # Print or display ggplot objects
 for (gg in gg_list) {
   plot(gg)
