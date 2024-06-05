@@ -1,0 +1,66 @@
+---
+title: "Glu_FC_Covariation"
+output: 
+  html_document:
+    rmdformats::robobook:
+      highlight: monochrome
+      lightbox: true
+      gallery: true
+date: "2024-06-03"
+---
+
+### Load packages 
+```{r setup, include=FALSE}
+rm(list = ls())
+knitr::opts_chunk$set(echo = FALSE,
+                   #   out.width="49%",
+                   #   out.height="49%",
+                      fig.show='hold')
+                   #   fig.align='center')
+library(dplyr)
+library(tidyverse)
+library(ggplot2)
+library(ggpmisc)
+library(cowplot)
+library(pls)
+source("~/projects/GluCEST-fMRI/glucest-rsfmri/read_grp_data.R")
+#source("/cbica/projects/thalamocortical_development/software/rotate_parcellation/R/perm.sphere.p.R") This package is used for parcel-based spin testing.
+
+#https://www.middleprofessor.com/files/applied-biostatistics_bookdown/_book/adding-covariates-to-a-linear-model
+
+# Markdown help:
+# https://bookdown.org/yihui/rmarkdown-cookbook/figures-side.html#fig:figures-side
+```
+
+### Set up Environment & Import Data
+```{r, message=F, warning=F}
+setwd("/Users/pecsok/projects/GluCEST-fMRI/glucest-rsfmri/")
+
+# Set fieldstrength and read in group data:
+cestmat <- read.csv('/Users/pecsok/projects/GluCEST-fMRI/glucest-rsfmri/fmri_pipeline/cest_parcelmat_3T.csv')
+fcmat <- read.csv('/Users/pecsok/projects/GluCEST-fMRI/glucest-rsfmri/fmri_pipeline/fc_parcelmat_3T.csv')
+cestmat <- cestmat[1:86,]
+fcmat <- fcmat[1:86,]
+```
+
+```{r pressure, echo=FALSE}
+# Keep only cest rows that have >50 cest count
+# ADD 
+
+# Make dfs with just mean data 
+cestdf <- cestmat[,c("NZMean_52","NZMean_54","NZMean_55","NZMean_56","NZMean_60","NZMean_69","NZMean_73","NZMean_74","NZMean_77","NZMean_78","NZMean_87","NZMean_88","NZMean_91","NZMean_92","NZMean_93","NZMean_96")]
+fcdf <- fcmat[,c("X52","X54","X55","X56","X60","X69","X73","X74","X77","X78","X87","X88","X91","X92","X93","X96")]
+
+print(cestdf)
+#cor(cestdf,fcdf, use= "complete.obs")
+
+for (i in c("52","54","55","56","60","69","73","74","77","78","87","88","91","92","93","96")) {
+  fc_col = paste("X", i, sep = "")
+  cest_col = paste("NZMean_", i, sep = "")
+  print(cestdf$cest_col)
+ # print(cor(cestdf$cest_col,fcdf$fc_col, use= "complete.obs"))
+}
+```
+
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
