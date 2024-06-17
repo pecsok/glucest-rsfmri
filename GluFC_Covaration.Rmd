@@ -33,34 +33,184 @@ source("~/projects/GluCEST-fMRI/glucest-rsfmri/read_grp_data.R")
 ```
 
 ### Set up Environment & Import Data
+Note - either import pre-made cestfcmat df or make here.
 ```{r, message=F, warning=F}
 setwd("/Users/pecsok/projects/GluCEST-fMRI/glucest-rsfmri/")
 
 # Set fieldstrength and read in group data:
 cestmat <- read.csv('/Users/pecsok/projects/GluCEST-fMRI/glucest-rsfmri/fmri_pipeline/cest_parcelmat_3T.csv')
 fcmat <- read.csv('/Users/pecsok/projects/GluCEST-fMRI/glucest-rsfmri/fmri_pipeline/fc_parcelmat_3T.csv')
+rehomat <- read.csv('/Users/pecsok/projects/GluCEST-fMRI/glucest-rsfmri/fmri_pipeline/reho_parcelmat.csv')
+
+#cestfcmat <- read.csv('/Users/pecsok/projects/GluCEST-fMRI/glucest-rsfmri/fmri_pipeline/CESTFC_covar_with_diag.csv')
 cestmat <- cestmat[1:86,]
 fcmat <- fcmat[1:86,]
+rehomat <- fcmat[1:86,]
+
+# Choose parcels 
+cestcols <- c("NZMean_52","NZMean_54","NZMean_55","NZMean_56","NZMean_60","NZMean_69","NZMean_73","NZMean_74","NZMean_77","NZMean_78","NZMean_87","NZMean_88","NZMean_91","NZMean_92","NZMean_93","NZMean_96")
+countcols <- c("NZcount_52","NZcount_54","NZcount_55","NZcount_56","NZcount_60","NZcount_69","NZcount_73","NZcount_74","NZcount_77","NZcount_78","NZcount_87","NZcount_88","NZcount_91","NZcount_92","NZcount_93","NZcount_96")
+#fccols <- c("FC_52","FC_54","FC_55","FC_56","FC_60","FC_69","FC_73","FC_74","FC_77","FC_78","FC_87","FC_88","FC_91","FC_92","FC_93","FC_96")
+fccols <- c("X52","X54","X55","X56","X60","X69","X73","X74","X77","X78","X87","X88","X91","X92","X93","X96")
+
+# CHOOSE WHICH FC MEASURE TO LOOK AT
+cols_cestdf <- c("BBLID", "age", "hstatus", cestcols, countcols)
+cestfcmat <- cbind(cestmat[cols_cestdf], rehomat[fccols])
+
+# Designate Diagnostic Groups
+cestfcmat$'diag_group'[cestfcmat$'hstatus'=="NC"] <- "NC"
+cestfcmat$'diag_group'[cestfcmat$'hstatus'=="PRO" | cestfcmat$'hstatus'=="PROR" | cestfcmat$'hstatus'=="PSY" | cestfcmat$'hstatus'=="S" ] <- "PSY"
+
+# Remove people
+cestfcmat <- cestfcmat[!(cestfcmat$BBLID=="19981"),] # Motion during CEST
+cestfcmat <- cestfcmat[!(cestfcmat$BBLID=="20645"),] # Motion during CEST
+cestfcmat <- cestfcmat[!(cestfcmat$BBLID=="90077"),] # Motion during CEST
+cestfcmat <- cestfcmat[!(cestfcmat$BBLID=="139272"),] # Motion during CEST
+
+cestfcmat$age <- as.numeric(cestfcmat$age)
+cestfcmat <- cestfcmat[cestfcmat$age>=18,]
 ```
 
+### Remove Values with poor CEST coverage 
 ```{r pressure, echo=FALSE}
-# Keep only cest rows that have >50 cest count
-# ADD 
-
-# Make dfs with just mean data 
-cestdf <- cestmat[,c("NZMean_52","NZMean_54","NZMean_55","NZMean_56","NZMean_60","NZMean_69","NZMean_73","NZMean_74","NZMean_77","NZMean_78","NZMean_87","NZMean_88","NZMean_91","NZMean_92","NZMean_93","NZMean_96")]
-fcdf <- fcmat[,c("X52","X54","X55","X56","X60","X69","X73","X74","X77","X78","X87","X88","X91","X92","X93","X96")]
-
-print(cestdf)
-#cor(cestdf,fcdf, use= "complete.obs")
-
-for (i in c("52","54","55","56","60","69","73","74","77","78","87","88","91","92","93","96")) {
-  fc_col = paste("X", i, sep = "")
-  cest_col = paste("NZMean_", i, sep = "")
-  print(cestdf$cest_col)
- # print(cor(cestdf$cest_col,fcdf$fc_col, use= "complete.obs"))
+for (i in 1:length(cestcols)) {
+  cestcol = cestcols[[i]]
+  countcol = countcols[[i]]
+  for (i in 1:nrow(cestfcmat)) {
+    # If it's not Nan and <50 Voxels or CEST Value is < 4 
+    if (!(is.na(cestfcmat[i,countcol])) && ((cestfcmat[i,countcol] <= 50) | (cestfcmat[i,cestcol] < 4))) {
+      cestfcmat[i,cestcol] <- NaN
+    }
+  }
 }
 ```
 
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+### CEST Density Plots
+```{r message=F, warning=F, out.width= "50%"}
+# Make Model
+
+for (cestcol in cestcols) {
+ # cestcol <- cestcols[[i]]
+  #print(class(cestcol))
+  graph_cols <- c(cestcol, 'diag_group')
+  graph_df <- cestfcmat[complete.cases(cestfcmat[, graph_cols]), ]
+
+  # Create Density Plot
+  denplot <- ggplot(graph_df, aes(graph_df[[cestcol]], fill=graph_df$'diag_group', color=graph_df$'diag_group')) +
+  geom_density(alpha=0.6, aes(x=graph_df[[cestcol]])) + #
+  theme(legend.position = "bottom") +
+  ggtitle(cestcol)
+  plot(denplot)
+}
+  
+```
+
+### CEST-FC Scatterplot
+```{r message=F, warning=F, out.width= "50%"}
+
+for (i in 1:length(cestcols)) {
+  # Select data
+  cestcol = cestcols[[i]]
+  fccol = fccols[[i]]
+  graph_cols <- c(cestcol, fccol, 'diag_group')
+  graph_df <- cestfcmat[complete.cases(cestfcmat[, graph_cols]), ]
+
+  # Create model
+  formula_str <- paste(cestcol, " ~ age + ", fccol) 
+  m1 <- lm(formula_str, data = graph_df)
+  summary <- summary(m1)
+  r_squared <- summary(m1)$r.squared
+  p_value <- summary(m1)$coefficients[2, 4]
+  print(summary)
+  
+  m1_psy <- lm(formula_str, data = graph_df[graph_df$diag_group=='PSY',])
+  summary_psy <- summary(m1_psy)
+  r_squared_psy <- summary(m1_psy)$r.squared
+  p_value_psy <- summary(m1_psy)$coefficients[2, 4]
+  print(summary_psy)
+  
+  m1_hc <- lm(formula_str, data = graph_df[graph_df$diag_group=='NC',])
+  summary_hc <- summary(m1_hc)
+  r_squared_hc <- summary(m1_hc)$r.squared
+  p_value_hc <- summary(m1_hc)$coefficients[2, 4]
+  print(summary_hc)
+
+  # Create plot
+  gg <- ggplot(graph_df, 
+               aes_string(x = fccol,
+                   y = cestcol, color='diag_group')) + 
+    geom_point(size=2.75) + #aes(color="purple"
+    geom_smooth(method = "lm",
+                formula = y ~ x,
+                se = FALSE) + #, color="black"
+    #scale_color_brewer(palette = "PuOr") +
+    ylab(paste(cestcol, "CEST")) +
+    xlab(paste(fccol, "FC")) +
+    annotate("text", x = Inf, y = -Inf, hjust = 1, vjust = 0, 
+           label = paste("R-squared =", round(r_squared, 3), "\n", "p-value =", round(p_value, 3)), 
+           size = 4) +
+    theme(legend.position="bottom", 
+          axis.title.x = element_text(size = 20),
+          axis.title.y = element_text(size = 20)) 
+  plot(gg)
+
+}
+
+```
+
+
+### CEST-Age Scatterplot
+```{r message=F, warning=F, out.width= "50%"}
+
+for (i in 1:length(cestcols)) {
+  # Select data
+  cestcol = cestcols[[i]]
+  graph_cols <- c(cestcol, 'age', 'diag_group')
+  graph_df <- cestfcmat[complete.cases(cestfcmat[, graph_cols]), ]
+  print(cestcol)
+  print(length(cestcol))
+  
+  # Create model
+  formula_str <- paste(cestcol, " ~ age") 
+  m1 <- lm(formula_str, data = graph_df)
+  summary <- summary(m1)
+  r_squared <- summary(m1)$r.squared
+  p_value <- summary(m1)$coefficients[2, 4]
+  print(summary)
+  
+  m1_psy <- lm(formula_str, data = graph_df[graph_df$diag_group=='PSY',])
+  summary_psy <- summary(m1_psy)
+  r_squared_psy <- summary(m1_psy)$r.squared
+  p_value_psy <- summary(m1_psy)$coefficients[2, 4]
+  print(summary_psy)
+  
+  m1_hc <- lm(formula_str, data = graph_df[graph_df$diag_group=='NC',])
+  summary_hc <- summary(m1_hc)
+  r_squared_hc <- summary(m1_hc)$r.squared
+  p_value_hc <- summary(m1_hc)$coefficients[2, 4]
+  print(summary_hc)
+
+  # Create plot
+  gg <- ggplot(graph_df, 
+               aes_string(x = 'age',
+                   y = cestcol, color='diag_group')) +  #
+    geom_point(size=2.75) + #aes(color="purple"
+    geom_smooth(method = "lm",
+                formula = y ~ x,
+                se = FALSE) + #, color="black"
+    #scale_color_brewer(palette = "PuOr") +
+    ylab(paste(cestcol, "CEST")) +
+    xlab(paste("Age")) +
+    annotate("text", x = Inf, y = -Inf, hjust = 1, vjust = 0, 
+           label = paste("R-squared =", round(r_squared, 3), "\n", "p-value =", round(p_value, 3)), 
+           size = 4) +
+    theme(legend.position="bottom", 
+          axis.title.x = element_text(size = 20),
+          axis.title.y = element_text(size = 20)) 
+  plot(gg)
+
+}
+
+```
+

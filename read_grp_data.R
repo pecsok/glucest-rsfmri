@@ -8,6 +8,7 @@ read_grp_data <- function(fieldstrength,dataset) {
   ##         Dataframe from desired fieldstrength dataset
   
   grp_path <- paste0('/Users/pecsok/projects/GluCEST-fMRI/glucest-rsfmri/motor_glu_pipeline/', dataset, fieldstrength, '_allCNB_DATAFREEZE0524.csv') #'_SOBP_wba_trimmed_with_extras.csv'
+ # grp_path <- paste0('/Users/pecsok/projects/GluCEST-fMRI/glucest-rsfmri/motor_glu_pipeline/', dataset, fieldstrength, '_SOBP_wba_zeros.csv') #'_SOBP_wba_trimmed_with_extras.csv'
   #diag_path <- paste0('./motor_pipeline/', dataset, fieldstrength, '.csv')
   grp_data <- read.csv(grp_path)
   #diag_data <- read.csv(diag_path)
