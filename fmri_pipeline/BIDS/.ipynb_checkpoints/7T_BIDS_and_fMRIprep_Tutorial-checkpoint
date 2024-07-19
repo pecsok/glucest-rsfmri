@@ -1,0 +1,82 @@
+This file describes step-by-step how to BIDSify 7T files and run fMRI prep
+
+To BIDSify 7T data: 
+
+1a. Download the following from flywheel (dcm and nii.gz files): 
+* Refer to subject_tracker_all.xlsx on Box for T1 and Bold filenames
+
+1b. Set up folders:
+   session=####
+   bblid=#####
+   mkdir ~/Desktop/Maggie/Graduate\ School/Project1-GluCEST-rsfMRI/7T_BIDS_and_DICOMS/7T_${bblid}
+   mkdir ~/Desktop/Maggie/Graduate\ School/Project1-GluCEST-rsfMRI/7T_BIDS_and_DICOMS/7T_${bblid}/sub-${bblid}
+   mkdir ~/Desktop/Maggie/Graduate\ School/Project1-GluCEST-rsfMRI/7T_BIDS_and_DICOMS/7T_${bblid}/sub-${bblid}/ses-${ses}/
+   mkdir ~/Desktop/Maggie/Graduate\ School/Project1-GluCEST-rsfMRI/7T_BIDS_and_DICOMS/7T_${bblid}/sub-${bblid}/ses-${ses}/anat
+   mkdir ~/Desktop/Maggie/Graduate\ School/Project1-GluCEST-rsfMRI/7T_BIDS_and_DICOMS/7T_${bblid}/sub-${bblid}/ses-${ses}/func
+   mkdir ~/Desktop/Maggie/Graduate\ School/Project1-GluCEST-rsfMRI/7T_BIDS_and_DICOMS/7T_${bblid}/sub-${bblid}/ses-${ses}/fmap
+   cp ~/Desktop/Maggie/Graduate\ School/Project1-GluCEST-rsfMRI/7T_BIDS_and_DICOMS/dataset_description.json ~/Desktop/Maggie/Graduate\ School/Project1-GluCEST-rsfMRI/7T_BIDS_and_DICOMS/7T_${bblid}
+    
+2. Put dicoms in their own folder within one big folder and scp all into PMACS
+   # mkdirs
+   mkdir ~/Desktop/Maggie/Graduate\ School/Project1-GluCEST-rsfMRI/7T_BIDS_and_DICOMS/7T_Dicoms/${bblid}_dicoms
+   mkdir ~/Desktop/Maggie/Graduate\ School/Project1-GluCEST-rsfMRI/7T_BIDS_and_DICOMS/7T_Dicoms/${bblid}_dicoms/anat
+   mkdir ~/Desktop/Maggie/Graduate\ School/Project1-GluCEST-rsfMRI/7T_BIDS_and_DICOMS/7T_Dicoms/${bblid}_dicoms/func
+   mkdir ~/Desktop/Maggie/Graduate\ School/Project1-GluCEST-rsfMRI/7T_BIDS_and_DICOMS/7T_Dicoms/${bblid}_dicoms/fmap
+   
+   # mv files into respective folders. Then, scp dicom folder to PMACS:
+   scp -r ~/Desktop/Maggie/Graduate\ School/Project1-GluCEST-rsfMRI/7T_BIDS_and_DICOMS/7T_Dicoms/${bblid}_dicoms pecsok@bblsub.pmacs.upenn.edu:/project/bbl_roalf_22qmidline/maggiesandbox/subject/7T/dicoms/
+ 
+3. Unzip, convert to nii (generates niis plus the json file), then remove unneeded files:
+   module load dcm2niix
+   dcm2niix * 
+   unzip *
+   dcm2niix *
+   rm *.dcm
+   rm *.nii
+   rm *.zip
+
+4. fslmaths to create mprage from UNI and INV2
+   source /project/bbl_projects/apps/default_modules.sh 
+   fslmaths sub-${bblid}_ses-${ses}_T1w.nii.gz -mul sub-${bblid}_ses-${ses}_UNI.nii.gz sub-${bblid}_ses-${ses}_T1w   
+   
+6. scp the jsons and the mprage back to local.
+   scp -r pecsok@bblsub.pmacs.upenn.edu:/project/bbl_roalf_22qmidline/maggiesandbox/subject/7T/dicoms/${bblid}_dicoms ~/Desktop/Maggie/Graduate\ School/Project1-GluCEST-rsfMRI/7T_BIDS_and_DICOMS/7T_Dicoms/${bblid}_dicoms/
+ 
+7. BIDSify json and nii.gz filenames: 
+   cd ~/Desktop/Maggie/Graduate\ School/Project1-GluCEST-rsfMRI/7T_BIDS_and_DICOMS/7T_${bblid}/sub-${bblid}/ses-${ses}/func
+   mv *.json sub-${bblid}_ses-${ses}_task-rest_bold.json
+   mv *.nii.gz sub-${bblid}_ses-${ses}_task-rest_bold.nii.gz
+   cd ../anat
+   mv *.json sub-${bblid}_ses-${ses}_T1w.json
+   mv *.nii.gz sub-${bblid}_ses-${ses}_T1w.nii.gz
+   cd ../fmap
+   mv *.json sub-${bblid}_ses-${ses}_dir-PA_run-1_epi.json
+   mv *.nii.gz sub-${bblid}_ses-${ses}_dir-PA_run-1_epi.nii.gz
+   
+   generic format: 
+   sub-${bblid}_ses-${ses}_task-rest_bold.json
+   sub-${bblid}_ses-${ses}_dir-PA_run-1_epi.json
+   sub-${bblid}_ses-${ses}_T1w.json
+
+  
+8. Add the following line to the fmap json:
+   "IntendedFor": ["ses-10738/func/sub-80557_ses-10738_task-rest_bold.nii.gz"],
+
+9. Add the following line to the func json:
+   "TaskName": "rest"
+   
+10. Submit subject folder to BIDS validator:
+    https://bids-standard.github.io/bids-validator/
+   
+11. If valid, scp subject folder into PMACS! Ready to run fMRIprep!
+    Current folder (To be updated soon): 
+    scp -r ~/Desktop/Maggie/Graduate\ School/Project1-GluCEST-rsfMRI/7T_BIDS_and_DICOMS/7T_${bblid}/ pecsok@bblsub.pmacs.upenn.edu:/project/bbl_roalf_22qmidline/maggiesandbox/subject/7T/
+
+To run fMRI prep: 
+QUEUE=bbl ibash
+bsub "sh fmriprep_nick.sh"
+
+*Note: Do not need to run "ssh singularity01" since singularity image is already installed. 
+
+
+

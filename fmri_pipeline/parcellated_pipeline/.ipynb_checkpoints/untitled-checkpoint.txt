@@ -1,0 +1,66 @@
+#!/bin/bash
+
+## DEFINE PATHS ##
+structural=$1
+pre=$2
+post=$3
+atlas=$4
+log=$5
+case=$6
+method=$7
+reso=$8
+str=$9
+nmap=$10
+
+#######################################################################################################
+## ENSURE STRUCTURAL DATA IS AVAILABLE FOR PROCESSING ##
+
+echo "CASE: $case"
+
+#check for structural data
+if [ -e $structural/$case/MNI_transforms/$case-${str}inMNI-Warped.nii.gz ]
+then
+echo "Structural Data exists for $case"
+sleep 1.5
+else
+echo "Oh No! Structural Data is missing. Cannot process CEST! Run register_to_MNI.sh first."
+return
+fi
+
+
+#######################################################################################################
+## make directories and log files ##
+
+mkdir $post/$case/ -p
+mkdir $post/$case/$atlas
+mkdir $post/$case/$atlas/$nmap
+
+#######################################################################################################
+## REGISTER NEUROMAPS TO UNI IMAGES AND GLUCEST IMAGES ##
+
+# Loop through each atlas
+for cest_atlas in "${atlases[@]}"; do
+  atlas_folder=$(echo $cest_atlas | cut -d '/' -f1)
+  atlas_name=$(echo $cest_atlas | cut -d '/' -f2)
+
+  antsApplyTransforms -d 3 -r $structural/$case/${case}-${str}_masked.nii.gz \
+    -i $atlas/${atlas_folder}/${atlas_name}_${reso}mm.nii.gz \
+    -n MultiLabel \
+    -o $post/$case/atlases/$str/${case}-${atlas_name}.nii.gz \
+    -t [$structural/$case/MNI_transforms/${case}-${str}inMNI-0GenericAffine.mat,1] \
+    -t $structural/$case/MNI_transforms/${case}-${str}inMNI-1InverseWarp.nii.gz
+
+  /project/bbl_projects/apps/melliott/scripts/extract_slice2.sh \
+    -MultiLabel $post/$case/atlases/$str/${case}-${atlas_name}.nii.gz \
+    $pre/$case/$case-B0B1CESTMAP.nii \
+    $post/$case/atlases/$str/${case}-cest-${atlas_name}.nii
+
+  gzip $post/$case/atlases/$str/${case}-cest-${atlas_name}.nii
+
+  fslmaths $post/$case/atlases/$str/${case}-cest-${atlas_name}.nii.gz \
+    -mul $post/$case/$case-tissuemap-bin.nii.gz \
+    $post/$case/atlases/$str/$case-cest-${atlas_name}.nii.gz
+
+  fslmaths $post/$case/atlases/$str/$case-cest-${atlas_name}.nii.gz \
+    -bin $post/$case/atlases/$str/$case-cest-${atlas_name}-bin.nii
+done
